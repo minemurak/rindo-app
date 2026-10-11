@@ -10,8 +10,8 @@ final class SegmentStore: ObservableObject {
     /// 画面下に出す状態の説明
     @Published private(set) var status = "読み込み中…"
 
-    /// 試作で表示する範囲（上武秩父線の周辺）
-    static let bbox = BBox(min_lon: 138.93, min_lat: 36.08, max_lon: 139.08, max_lat: 36.13)
+    /// 試作で表示する範囲（上武秩父線・城峰1号線の周辺）
+    static let bbox = BBox(min_lon: 138.90, min_lat: 36.04, max_lon: 139.10, max_lat: 36.15)
 
     struct BBox: Encodable, Sendable {
         let min_lon: Double, min_lat: Double, max_lon: Double, max_lat: Double

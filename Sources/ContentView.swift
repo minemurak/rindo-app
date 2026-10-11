@@ -27,7 +27,7 @@ struct ContentView: View {
                     Button {
                         offline.download(segments: store.geojson)
                     } label: {
-                        Label(offline.isComplete ? "保存済み" : "林道沿いの地図を保存",
+                        Label(offline.isComplete ? "保存済み" : (offline.needsUpdate ? "地図を保存し直す" : "林道沿いの地図を保存"),
                               systemImage: offline.isComplete ? "checkmark.circle" : "arrow.down.circle")
                     }
                     .buttonStyle(.bordered)
@@ -57,6 +57,9 @@ struct ContentView: View {
         .task {
             location.request()
             await store.load()
+        }
+        .onChange(of: store.geojson) { _, newValue in
+            offline.sync(segments: newValue)
         }
     }
 }
