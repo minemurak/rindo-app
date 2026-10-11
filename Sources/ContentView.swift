@@ -25,9 +25,9 @@ struct ContentView: View {
                 Legend()
                 HStack(alignment: .center, spacing: 8) {
                     Button {
-                        offline.download()
+                        offline.download(segments: store.geojson)
                     } label: {
-                        Label(offline.isComplete ? "保存済み" : "地図をオフライン用に保存",
+                        Label(offline.isComplete ? "保存済み" : "林道沿いの地図を保存",
                               systemImage: offline.isComplete ? "checkmark.circle" : "arrow.down.circle")
                     }
                     .buttonStyle(.bordered)
