@@ -99,13 +99,7 @@ def nearest_index(coords, point) -> tuple[int, float]:
 
 def overpass_link(name: str | None, bbox=DEFAULT_BBOX) -> str:
     """name があれば名前で、なければ範囲内の車が通れる道（名前なしを含む）をすべて取る"""
-    s, w, n, e = bbox
-    if name:
-        sel = f'way["name"~"{name}"]({s},{w},{n},{e});'
-    else:
-        sel = f'way["highway"~"^(track|unclassified|service|tertiary)$"]({s},{w},{n},{e});'
-    query = f"[out:json][timeout:90];\n{sel}\nout geom;"
-    return "https://overpass-turbo.eu/?Q=" + urllib.parse.quote(query) + "&R"
+    return "https://overpass-turbo.eu/?Q=" + urllib.parse.quote(overpass_query(name, bbox)) + "&R"
 
 
 def parse_bbox(text: str):
@@ -122,6 +116,69 @@ def cmd_link(args):
         print("\n名前なしの道も含め、範囲内の道をすべて取ります。build では osm_ids で使う way を指定します。")
     print("\n開いたら Export → GeoJSON → download で保存し、data/osm/<slug>.geojson に置く。")
     print("混雑エラーのときは、設定のサーバーを https://overpass.kumi.systems/api/ に変える。")
+
+
+OVERPASS_SERVERS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
+
+
+def overpass_query(name: str | None, bbox) -> str:
+    s, w, n, e = bbox
+    if name:
+        sel = f'way["name"~"{name}"]({s},{w},{n},{e});'
+    else:
+        sel = f'way["highway"~"^(track|unclassified|service|tertiary)$"]({s},{w},{n},{e});'
+    return f"[out:json][timeout:90];\n{sel}\nout geom;"
+
+
+def to_geojson(osm: dict) -> dict:
+    """Overpass の JSON（out geom）を、Overpass Turbo の書き出しと同じ形の GeoJSON にする"""
+    features = []
+    for el in osm.get("elements", []):
+        if el.get("type") != "way" or "geometry" not in el:
+            continue
+        coords = [[p["lon"], p["lat"]] for p in el["geometry"]]
+        closed = len(coords) > 3 and coords[0] == coords[-1] and not el.get("tags", {}).get("highway")
+        geometry = {"type": "Polygon", "coordinates": [coords]} if closed else {"type": "LineString", "coordinates": coords}
+        props = {"@id": f"way/{el['id']}", **el.get("tags", {})}
+        features.append({"type": "Feature", "properties": props, "geometry": geometry, "id": f"way/{el['id']}"})
+    return {"type": "FeatureCollection",
+            "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+            "features": features}
+
+
+def cmd_fetch(args):
+    """Overpass API から直接取得する。混雑していれば次のサーバーを試す"""
+    import time
+    import urllib.request
+    bbox = parse_bbox(args.bbox) if args.bbox else DEFAULT_BBOX
+    data = urllib.parse.urlencode({"data": overpass_query(args.name, bbox)}).encode()
+    last_error = None
+    for attempt in range(3):
+        for server in OVERPASS_SERVERS:
+            try:
+                req = urllib.request.Request(server, data=data, headers={"User-Agent": "rindo-app/0.1 (github.com/minemurak/rindo-app)"})
+                with urllib.request.urlopen(req, timeout=120) as res:
+                    osm = json.loads(res.read().decode("utf-8"))
+                if osm.get("remark") and not osm.get("elements"):
+                    raise RuntimeError(osm["remark"][:200])
+                geo = to_geojson(osm)
+                out = ROOT / "data" / "osm" / f"{args.slug}.geojson"
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(json.dumps(geo, ensure_ascii=False, indent=1), encoding="utf-8")
+                names = sorted({f["properties"].get("name", "（名前なし）") for f in geo["features"]})
+                print(f"{server} から {len(geo['features'])} 件を取得 → {out.relative_to(ROOT)}")
+                print("含まれる名前：" + "、".join(names[:40]) + ("…" if len(names) > 40 else ""))
+                return
+            except Exception as e:  # 混雑・タイムアウトなど。次のサーバーへ
+                last_error = e
+                print(f"失敗：{server}（{str(e)[:120]}）")
+        time.sleep(20 * (attempt + 1))
+    raise SystemExit(f"エラー：すべてのサーバーで取得できませんでした（最後のエラー：{last_error}）")
 
 
 def cmd_place(args):
@@ -271,6 +328,11 @@ def main(argv=None):
     p.add_argument("name", nargs="?", help="林道名の一部。正規表現も可（例：城[峰峯]）。省略すると範囲内の道をすべて取る")
     p.add_argument("--bbox", help="範囲 南,西,北,東（例：36.05,138.98,36.13,139.08）。省略時は3都県全体")
     p.set_defaults(func=cmd_link)
+    p = sub.add_parser("fetch", help="Overpass API から直接取得して data/osm/<slug>.geojson に保存する")
+    p.add_argument("slug", help="保存名（例：jomine-1）")
+    p.add_argument("name", nargs="?", help="林道名の一部。正規表現も可。省略すると範囲内の道をすべて取る")
+    p.add_argument("--bbox", help="範囲 南,西,北,東。省略時は3都県全体")
+    p.set_defaults(func=cmd_fetch)
     p = sub.add_parser("place", help="国土地理院の地名検索のリンクを出す")
     p.add_argument("name", help="地名（例：風早峠）")
     p.set_defaults(func=cmd_place)

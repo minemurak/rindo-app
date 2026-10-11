@@ -1,0 +1,50 @@
+# OpenStreetMap から林道の線を取得し、data/osm/<slug>.geojson としてコミットする。
+# Actions タブ →「Fetch OSM」→「Run workflow」で、保存名・林道名・範囲を入れて実行する。
+name: Fetch OSM
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "保存名（英数字とハイフン。例：jomine-1）"
+        required: true
+      name:
+        description: "林道名の一部（正規表現も可。例：城[峰峯]）。空なら範囲内の道をすべて取る"
+        required: false
+        default: ""
+      bbox:
+        description: "範囲 南,西,北,東（例：36.04,138.97,36.14,139.10）。空なら3都県全体"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Overpass API から取得（混雑時は別のサーバーを順に試す）
+        env:
+          SLUG: ${{ inputs.slug }}
+          NAME: ${{ inputs.name }}
+          BBOX: ${{ inputs.bbox }}
+        run: |
+          case "$SLUG" in (*[!a-z0-9-]*|"") echo "保存名は英小文字・数字・ハイフンのみ"; exit 1;; esac
+          args=(fetch "$SLUG")
+          [ -n "$NAME" ] && args+=("$NAME")
+          [ -n "$BBOX" ] && args+=(--bbox "$BBOX")
+          python3 tools/road.py "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: 取得したファイルをコミット
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "data/osm/$SLUG.geojson"
+          if git diff --cached --quiet; then echo "変更なし"; exit 0; fi
+          git commit -m "OSM データを取得：$SLUG [skip ci]"
+          git push

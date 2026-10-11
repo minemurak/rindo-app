@@ -81,7 +81,9 @@ Base64 は Windows の PowerShell で作れる。
 
 `tools/road.py`（Python 3.9 以上、追加ライブラリ不要）で、林道1本を区間に分けた SQL を作る。
 
-1. `python3 tools/road.py link 城峰` で出るリンクを開き、Export → GeoJSON → download で `data/osm/<slug>.geojson` に保存
+1. OSM の線を取る。どちらかの方法で `data/osm/<slug>.geojson` を作る
+    - **おすすめ**：Actions タブ →「Fetch OSM」→「Run workflow」で、保存名（slug）・林道名（例：`城[峰峯]`）・範囲（`南,西,北,東`）を入れて実行。混雑していないサーバーを自動で探して取得し、リポジトリにコミットする
+    - 手動：`python3 tools/road.py link 城峰 --bbox 南,西,北,東` で出るリンクを開き、Export → GeoJSON → download で保存
 2. 区間の境目にする地名は `python3 tools/road.py place 風早峠` で国土地理院の地名検索を開き、座標を調べる
 3. `data/roads/<slug>.json` を書く（`data/roads/joubu-chichibu.json` が見本）。一般通行区分と規制は管理者の公式情報で決める
 4. `python3 tools/road.py build data/roads/<slug>.json` で `data/segments/<slug>.geojson` と `supabase/roads/<slug>.sql` ができる
