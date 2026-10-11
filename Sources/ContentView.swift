@@ -22,8 +22,9 @@ struct ContentView: View {
                     SegmentCard(info: s) { selected = nil }
                 }
                 Legend()
-                HStack {
+                HStack(alignment: .top) {
                     Text(store.status)
+                        .textSelection(.enabled)
                     Spacer()
                     Text("ビルド \(buildNumber)")
                 }
