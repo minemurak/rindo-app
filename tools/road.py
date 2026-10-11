@@ -97,14 +97,29 @@ def nearest_index(coords, point) -> tuple[int, float]:
 
 # ---------- コマンド ----------
 
-def overpass_link(name: str, bbox=DEFAULT_BBOX) -> str:
+def overpass_link(name: str | None, bbox=DEFAULT_BBOX) -> str:
+    """name があれば名前で、なければ範囲内の車が通れる道（名前なしを含む）をすべて取る"""
     s, w, n, e = bbox
-    query = f'[out:json][timeout:90];\nway["name"~"{name}"]({s},{w},{n},{e});\nout geom;'
+    if name:
+        sel = f'way["name"~"{name}"]({s},{w},{n},{e});'
+    else:
+        sel = f'way["highway"~"^(track|unclassified|service|tertiary)$"]({s},{w},{n},{e});'
+    query = f"[out:json][timeout:90];\n{sel}\nout geom;"
     return "https://overpass-turbo.eu/?Q=" + urllib.parse.quote(query) + "&R"
 
 
+def parse_bbox(text: str):
+    parts = [float(x) for x in text.split(",")]
+    if len(parts) != 4:
+        raise SystemExit("エラー：--bbox は 南,西,北,東 の4つの数で指定してください")
+    return tuple(parts)
+
+
 def cmd_link(args):
-    print(overpass_link(args.name))
+    bbox = parse_bbox(args.bbox) if args.bbox else DEFAULT_BBOX
+    print(overpass_link(args.name, bbox))
+    if not args.name:
+        print("\n名前なしの道も含め、範囲内の道をすべて取ります。build では osm_ids で使う way を指定します。")
     print("\n開いたら Export → GeoJSON → download で保存し、data/osm/<slug>.geojson に置く。")
     print("混雑エラーのときは、設定のサーバーを https://overpass.kumi.systems/api/ に変える。")
 
@@ -130,11 +145,22 @@ def cmd_build(args):
 
     osm = json.loads((ROOT / cfg["osm_file"]).read_text(encoding="utf-8"))
     exclude = set(cfg.get("osm_exclude", []))
-    ways = [f["geometry"]["coordinates"] for f in osm["features"]
-            if f.get("geometry", {}).get("type") == "LineString"
-            and f.get("properties", {}).get("name") == cfg["osm_name"]
-            and f.get("properties", {}).get("@id") not in exclude]
-    print(f"OSM から「{cfg['osm_name']}」の線を {len(ways)} 本読み込み")
+    ids = set(cfg.get("osm_ids", []))
+    lines_only = [f for f in osm["features"] if f.get("geometry", {}).get("type") == "LineString"]
+    if ids:
+        # 名前の付いていない道などは、OSM の way の番号で指定する
+        picked = [f for f in lines_only if f.get("properties", {}).get("@id") in ids]
+        missing = ids - {f["properties"]["@id"] for f in picked}
+        if missing:
+            raise SystemExit(f"エラー：OSM ファイルに見つからない way があります：{sorted(missing)}")
+        label = f"指定した {len(ids)} 本の way"
+    else:
+        names = cfg["osm_name"] if isinstance(cfg["osm_name"], list) else [cfg["osm_name"]]
+        picked = [f for f in lines_only if f.get("properties", {}).get("name") in names]
+        label = "「" + "」「".join(names) + "」"
+    ways = [f["geometry"]["coordinates"] for f in picked
+            if f.get("properties", {}).get("@id") not in exclude]
+    print(f"OSM から{label}の線を {len(ways)} 本読み込み")
 
     coords = join_ways(ways)
     if cfg.get("reverse"):
@@ -242,7 +268,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="林道データ整備ツール")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("link", help="OSM から線を取る Overpass Turbo のリンクを出す")
-    p.add_argument("name", help="林道名の一部（例：城峰）")
+    p.add_argument("name", nargs="?", help="林道名の一部。正規表現も可（例：城[峰峯]）。省略すると範囲内の道をすべて取る")
+    p.add_argument("--bbox", help="範囲 南,西,北,東（例：36.05,138.98,36.13,139.08）。省略時は3都県全体")
     p.set_defaults(func=cmd_link)
     p = sub.add_parser("place", help="国土地理院の地名検索のリンクを出す")
     p.add_argument("name", help="地名（例：風早峠）")
