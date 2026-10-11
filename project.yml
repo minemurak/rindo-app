@@ -25,6 +25,8 @@ targets:
       path: Sources/Info.plist
       properties:
         CFBundleDisplayName: 林道アプリ
+        CFBundleShortVersionString: $(MARKETING_VERSION)   # 表示上のバージョン
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)        # ビルド番号（GitHub Actions の実行番号）
         NSLocationWhenInUseUsageDescription: 現在地を地図に表示するために使います
         ITSAppUsesNonExemptEncryption: false   # HTTPS通信のみ。輸出申告の画面を毎回出さない
         UILaunchScreen: {}
@@ -32,6 +34,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.minemurak.rindomap
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "0.1.0"
+        MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1"                      # iPhoneのみ
