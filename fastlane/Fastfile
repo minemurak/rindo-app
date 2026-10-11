@@ -2,6 +2,30 @@
 
 APP_ID = "com.minemurak.ridomap"
 
+require "base64"
+
+# ASC_KEY_CONTENT には .p8 の中身をそのまま貼っても、Base64 にしたものでもよい。
+# どちらでも、-----BEGIN PRIVATE KEY----- で始まる鍵の文字列に直して返す。
+def asc_private_key
+  raw = ENV["ASC_KEY_CONTENT"].to_s.strip
+  UI.user_error!("Secret ASC_KEY_CONTENT が空です") if raw.empty?
+
+  text = raw.include?("BEGIN PRIVATE KEY") ? raw.dup : Base64.decode64(raw)
+  text.force_encoding("UTF-8") unless text.include?("\0")
+
+  # Windows のメモ帳などで UTF-16 として保存されたファイルにも対応する
+  if text.include?("\0")
+    text = text.dup.force_encoding("UTF-16LE").encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+  end
+  text = text.scrub("").sub("﻿", "").gsub("\r\n", "\n").strip
+
+  unless text.include?("BEGIN PRIVATE KEY") && text.include?("END PRIVATE KEY")
+    UI.user_error!("ASC_KEY_CONTENT が .p8 の鍵として読めません。.p8 をメモ帳で開き、" \
+                   "-----BEGIN PRIVATE KEY----- から -----END PRIVATE KEY----- までを丸ごと登録し直してください")
+  end
+  text + "\n"
+end
+
 default_platform(:ios)
 
 platform :ios do
@@ -9,10 +33,10 @@ platform :ios do
     setup_ci
 
     api_key = app_store_connect_api_key(
-      key_id: ENV["ASC_KEY_ID"],
-      issuer_id: ENV["ASC_ISSUER_ID"],
-      key_content: ENV["ASC_KEY_CONTENT"],
-      is_key_content_base64: true
+      key_id: ENV["ASC_KEY_ID"].to_s.strip,
+      issuer_id: ENV["ASC_ISSUER_ID"].to_s.strip,
+      key_content: asc_private_key,
+      is_key_content_base64: false
     )
 
     # 初回だけ変数 MATCH_READONLY=false で実行し、証明書とプロファイルを作る

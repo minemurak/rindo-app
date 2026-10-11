@@ -43,7 +43,7 @@ Bundle ID を変える場合は `project.yml`、`fastlane/Fastfile`、`fastlane/
 | --- | --- |
 | `ASC_KEY_ID` | API キーのキー ID |
 | `ASC_ISSUER_ID` | API キーの発行者 ID |
-| `ASC_KEY_CONTENT` | .p8 の中身を Base64 にしたもの |
+| `ASC_KEY_CONTENT` | .p8 をメモ帳で開き、`-----BEGIN PRIVATE KEY-----` から `-----END PRIVATE KEY-----` までを丸ごと貼り付けたもの（Base64 にしたものでも可） |
 | `TEAM_ID` | Apple Developer のチーム ID |
 | `MATCH_PASSWORD` | 証明書を暗号化する任意のパスワード |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | 「ユーザー名:個人アクセストークン」を Base64 にしたもの |
