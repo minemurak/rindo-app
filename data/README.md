@@ -6,7 +6,10 @@
 
 OpenStreetMap のデータは ODbL ライセンス。アプリ内に「© OpenStreetMap contributors」の表示が必要。
 一般通行の可否は OSM のタグではなく、管理者（自治体）の公式情報で決める。
+| `joubu-chichibu-segments.geojson` | 上武秩父線を3区間に分けたもの（西端〜風早峠 14.38km／風早峠〜更木線分岐 3.90km（大型車通行止め）／更木線分岐〜東端 0.93km） | 下記 |
 
-| `joubu-chichibu-segments.geojson` | 上武秩父線を風早峠で2区間に分けたもの（西 14.38km／東 4.83km） | 線：© OpenStreetMap contributors／風早峠の位置：国土地理院 地名データ |
+区間の境目の出典
 
-区間の境目の「更木線分岐」は位置未確認。確認できたら区間を追加で分け、大型車通行不可の規制を `supabase/segments.sql` に加える。
+- 風早峠：国土地理院 地名データ（線から約7m）
+- 更木線分岐：秩父農林振興センターの位置図（令和8年6月1日）を、西端と風早峠の2点で座標に合わせた推定。誤差は約150m
+- 管理者：秩父農林振興センター（[路線別詳細](https://www.pref.saitama.lg.jp/documents/4527/rosenbetusyosai20260520.pdf)・位置図で全線が同センター管内）
