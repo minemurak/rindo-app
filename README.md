@@ -87,6 +87,6 @@ Base64 は Windows の PowerShell で作れる。
 2. 区間の境目にする地名は `python3 tools/road.py place 風早峠` で国土地理院の地名検索を開き、座標を調べる
 3. `data/roads/<slug>.json` を書く（`data/roads/joubu-chichibu.json` が見本）。一般通行区分と規制は管理者の公式情報で決める
 4. `python3 tools/road.py build data/roads/<slug>.json` で `data/segments/<slug>.geojson` と `supabase/roads/<slug>.sql` ができる
-5. Supabase の SQL Editor で `supabase/roads/<slug>.sql` を実行する（何度実行しても同じ状態になる）
+5. `python3 tools/road.py bundle` で全林道を `supabase/all-roads.sql` にまとめ、Supabase の SQL Editor で実行する（何度実行しても同じ状態になる）
 
-境目の点が線から100m以上離れている、線が枝分かれしている、などのときは、ツールが警告やエラーで知らせる。
+同じ名前の線に枝道や離れた部分があれば、いちばん長くつながった本線だけを使い、除いた長さを表示する。境目の点が線から100m以上離れているときも警告する。

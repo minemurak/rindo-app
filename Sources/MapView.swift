@@ -28,8 +28,8 @@ struct MapView: UIViewRepresentable {
         let map = MLNMapView(frame: .zero, styleURL: Self.styleURL())
         map.delegate = context.coordinator
         map.showsUserLocation = true
-        map.setCenter(CLLocationCoordinate2D(latitude: 36.105, longitude: 139.005),
-                      zoomLevel: 11.5, animated: false)
+        map.setCenter(CLLocationCoordinate2D(latitude: 36.0, longitude: 139.07),
+                      zoomLevel: 9.8, animated: false)
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinator.handleTap(_:)))
         // 地図自体のタップ操作（ズームなど）を邪魔しない

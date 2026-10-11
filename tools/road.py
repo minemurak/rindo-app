@@ -49,45 +49,99 @@ def line_length_m(coords) -> float:
     return sum(dist_m(a, b) for a, b in zip(coords, coords[1:]))
 
 
-def join_ways(ways: list[list[list[float]]]) -> list[list[float]]:
-    """複数の線（OSM の way）を、端点のつながりをたどって1本にする。
-    枝分かれや離れた線があればエラーにする。"""
+def join_ways(ways: list[list[list[float]]], report: bool = False) -> list[list[float]]:
+    """複数の線（OSM の way）から、いちばん長くつながった1本の道を取り出す。
+
+    線の頂点をつないだ網を作り、
+      - 端どうしが JOIN_TOLERANCE_M 以内なら同じ点とみなしてつなぐ（小さな途切れ）
+      - 枝道（行き止まりの支線）があれば、最も長い経路だけを残す
+      - 同じ名前の離れた道があれば、いちばん長いまとまりだけを使う
+    残さなかった部分の長さは report=True のとき表示する。"""
+    import heapq
     if not ways:
         raise SystemExit("エラー：対象の線が1本もありません。osm_name と OSM ファイルを確認してください")
-    remaining = [list(map(tuple, w)) for w in ways]
 
-    def near(p, q):
-        return dist_m(p, q) <= JOIN_TOLERANCE_M
-
-    # 端点のうち、ほかの線とつながっていないものを始点の候補にする
-    ends = []
-    for i, w in enumerate(remaining):
+    key = lambda p: (round(p[0], 7), round(p[1], 7))
+    # 端点どうしの近いものを1つの点にまとめる
+    endpoints: list[tuple] = []
+    alias: dict = {}
+    for w in ways:
         for p in (w[0], w[-1]):
-            touching = sum(1 for j, v in enumerate(remaining) if j != i and (near(p, v[0]) or near(p, v[-1])))
-            if touching == 0:
-                ends.append(p)
-    if len(ends) != 2:
-        raise SystemExit(
-            f"エラー：線の端が{len(ends)}か所あり、1本の道につなげられません（枝分かれや途切れの可能性）。"
-            "QGIS などで線を確認し、不要な way を osm_exclude に書いてください")
+            k = key(p)
+            if k in alias:
+                continue
+            for q in endpoints:
+                if dist_m(k, q) <= JOIN_TOLERANCE_M:
+                    alias[k] = q
+                    break
+            else:
+                endpoints.append(k)
+                alias[k] = k
+    canon = lambda p: alias.get(key(p), key(p))
 
-    start = min(ends)  # 経度が小さい方（西側）から始める。向きは設定の reverse で反転できる
-    chain = [start]
-    current = start
-    while remaining:
-        for i, w in enumerate(remaining):
-            if near(current, w[0]):
-                piece = w
-                break
-            if near(current, w[-1]):
-                piece = w[::-1]
-                break
-        else:
-            raise SystemExit("エラー：途中で線がつながりません。osm_exclude や JOIN_TOLERANCE_M を見直してください")
-        remaining.pop(i)
-        chain.extend(piece[1:])
-        current = piece[-1]
-    return [list(p) for p in chain]
+    graph: dict = {}
+    for w in ways:
+        pts = [canon(p) for p in w]
+        for a, b in zip(pts, pts[1:]):
+            if a == b:
+                continue
+            d = dist_m(a, b)
+            graph.setdefault(a, {})[b] = d
+            graph.setdefault(b, {})[a] = d
+
+    # つながっているまとまりに分け、いちばん長いものを使う
+    seen, comps = set(), []
+    for n in graph:
+        if n in seen:
+            continue
+        stack, comp = [n], []
+        seen.add(n)
+        while stack:
+            u = stack.pop()
+            comp.append(u)
+            for v in graph[u]:
+                if v not in seen:
+                    seen.add(v)
+                    stack.append(v)
+        length = sum(d for u in comp for d in graph[u].values()) / 2
+        comps.append((length, comp))
+    comps.sort(key=lambda c: -c[0])
+    total_len, comp = comps[0]
+
+    def farthest(src):
+        dist, prev = {src: 0.0}, {src: None}
+        heap = [(0.0, src)]
+        while heap:
+            d, u = heapq.heappop(heap)
+            if d > dist[u]:
+                continue
+            for v, w in graph[u].items():
+                nd = d + w
+                if nd < dist.get(v, float("inf")):
+                    dist[v], prev[v] = nd, u
+                    heapq.heappush(heap, (nd, v))
+        far = max(dist, key=dist.get)
+        return far, dist[far], prev
+
+    # 最も遠い2点の間の経路（網の「直径」）を、その道の本線とみなす
+    a, _, _ = farthest(min(comp))
+    b, main_len, prev = farthest(a)
+    path = []
+    node = b
+    while node is not None:
+        path.append(node)
+        node = prev[node]
+    if path[0] > path[-1]:  # 経度が小さい方（西側）から始める
+        path.reverse()
+
+    if report:
+        dropped_branch = total_len - main_len
+        dropped_other = sum(c[0] for c in comps[1:])
+        if dropped_branch > 50:
+            print(f"  注意：枝道など {dropped_branch / 1000:.2f} km を除き、本線 {main_len / 1000:.2f} km を使います")
+        if dropped_other > 0:
+            print(f"  注意：離れた場所にある同名の線 {len(comps) - 1} まとまり（計 {dropped_other / 1000:.2f} km）を除きました")
+    return [list(p) for p in path]
 
 
 def nearest_index(coords, point) -> tuple[int, float]:
@@ -219,7 +273,7 @@ def cmd_build(args):
             if f.get("properties", {}).get("@id") not in exclude]
     print(f"OSM から{label}の線を {len(ways)} 本読み込み")
 
-    coords = join_ways(ways)
+    coords = join_ways(ways, report=True)
     if cfg.get("reverse"):
         coords.reverse()
     total = line_length_m(coords)
@@ -321,6 +375,29 @@ def cmd_build(args):
     print(f"\n出力：{out_geo.relative_to(ROOT)}\n      {out_sql.relative_to(ROOT)}")
 
 
+def cmd_bundle(args):
+    """supabase/roads/*.sql を1つにまとめ、supabase/all-roads.sql を作る（SQL Editor で1回貼るだけで全林道を登録）"""
+    files = sorted((ROOT / "supabase" / "roads").glob("*.sql"))
+    if not files:
+        raise SystemExit("エラー：supabase/roads に SQL がありません。先に build してください")
+    parts = ["-- 全林道の区間データ。tools/road.py bundle で生成。手で編集しない。",
+             "-- schema.sql を実行したあとに、SQL Editor で全文を実行する。何度実行しても同じ状態になる。", ""]
+    for f in files:
+        body = f.read_text(encoding="utf-8")
+        # 各ファイル末尾の確認用 select は外し、最後にまとめて1つだけ置く
+        body = body.split("-- 確認：")[0].rstrip()
+        parts += [f"-- ===== {f.stem} =====", body, ""]
+    parts += [
+        "-- 確認：林道ごとの区間数と規制数",
+        "select r.name as 林道, count(distinct s.id) as 区間数, count(x.id) as 規制数",
+        "from roads r join segments s on s.road_id = r.id left join restrictions x on x.segment_id = s.id",
+        "group by r.name order by r.name;",
+    ]
+    out = ROOT / "supabase" / "all-roads.sql"
+    out.write_text("\n".join(parts) + "\n", encoding="utf-8")
+    print(f"{len(files)} 本の林道をまとめました → {out.relative_to(ROOT)}（{out.stat().st_size / 1024:.0f} KB）")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="林道データ整備ツール")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -339,6 +416,8 @@ def main(argv=None):
     p = sub.add_parser("build", help="設定ファイルから区間データと SQL を作る")
     p.add_argument("config", help="data/roads/<slug>.json")
     p.set_defaults(func=cmd_build)
+    p = sub.add_parser("bundle", help="全林道の SQL を supabase/all-roads.sql にまとめる")
+    p.set_defaults(func=cmd_bundle)
     args = parser.parse_args(argv)
     args.func(args)
 

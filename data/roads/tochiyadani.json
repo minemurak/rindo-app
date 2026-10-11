@@ -1,0 +1,26 @@
+{
+  "slug": "tochiyadani",
+  "road": "栃屋谷線",
+  "kind": "林道",
+  "administrator": {
+    "name": "川越農林振興センター",
+    "kind": "県"
+  },
+  "osm_file": "data/osm/saitama-west.geojson",
+  "osm_name": "林道栃屋谷線",
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [],
+  "segments": [
+    {
+      "note": "全線",
+      "surface": null,
+      "general_access": "可"
+    }
+  ],
+  "restrictions": [],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）",
+    "通行可否：川越農林振興センター 森林管理道の通行止め情報（2025年6月12日掲載、2026年10月11日閲覧）で通行可能な路線として明記"
+  ]
+}

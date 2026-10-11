@@ -1,0 +1,26 @@
+{
+  "slug": "minoyama",
+  "road": "蓑山線",
+  "kind": "林道",
+  "administrator": {
+    "name": "秩父農林振興センター",
+    "kind": "県"
+  },
+  "osm_file": "data/osm/saitama-west.geojson",
+  "osm_name": "林道蓑山線",
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [],
+  "segments": [
+    {
+      "note": "全線（皆野町・美の山周辺）",
+      "surface": null,
+      "general_access": "可"
+    }
+  ],
+  "restrictions": [],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）",
+    "通行可否：秩父農林振興センター 森林管理道の通行制限情報（2026年10月11日閲覧）の通行制限路線に含まれないため「可」"
+  ]
+}

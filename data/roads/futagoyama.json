@@ -1,0 +1,27 @@
+{
+  "slug": "futagoyama",
+  "road": "二子山線",
+  "kind": "林道",
+  "administrator": {
+    "name": "秩父農林振興センター",
+    "kind": "県"
+  },
+  "osm_file": "data/osm/saitama-west.geojson",
+  "osm_name": "林道二子山線",
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [],
+  "segments": [
+    {
+      "note": "全線（西秩父線の土坂峠〜矢久峠が通行止めのため、東側へは通り抜け不可）",
+      "surface": null,
+      "general_access": "可"
+    }
+  ],
+  "restrictions": [],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）",
+    "通行可否：秩父農林振興センター 森林管理道の通行制限情報（2026年10月11日閲覧）の通行制限路線に含まれないため「可」",
+    "OSM で同名の離れた線（約2.9km）は本線から除外"
+  ]
+}
