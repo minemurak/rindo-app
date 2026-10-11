@@ -20,7 +20,7 @@
 
 | 項目 | 値 |
 | --- | --- |
-| Bundle ID | `com.minemurak.ridomap` |
+| Bundle ID | `com.minemurak.rindomap` |
 | 証明書保管用リポジトリ | `minemurak/rindo-certificates`（非公開） |
 
 Bundle ID を変える場合は `project.yml`、`fastlane/Fastfile`、`fastlane/Matchfile` の3ファイルを直す。

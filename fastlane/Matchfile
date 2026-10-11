@@ -3,4 +3,4 @@
 git_url("https://github.com/minemurak/rindo-certificates.git")
 storage_mode("git")
 type("appstore")
-app_identifier(["com.minemurak.ridomap"])
+app_identifier(["com.minemurak.rindomap"])

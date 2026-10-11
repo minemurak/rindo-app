@@ -1,6 +1,6 @@
 # 署名・ビルド・TestFlight送信の手順
 
-APP_ID = "com.minemurak.ridomap"
+APP_ID = "com.minemurak.rindomap"
 
 require "base64"
 
