@@ -3,6 +3,11 @@ name: TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      create_certificates:
+        description: "証明書とプロファイルを新しく作る（初回だけチェック）"
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -39,5 +44,6 @@ jobs:
           TEAM_ID: ${{ secrets.TEAM_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-          MATCH_READONLY: ${{ vars.MATCH_READONLY }}
+          # 手動実行でチェックを入れたとき、または変数 MATCH_READONLY=false のときだけ証明書を作る
+          MATCH_READONLY: ${{ inputs.create_certificates && 'false' || vars.MATCH_READONLY }}
         run: fastlane beta

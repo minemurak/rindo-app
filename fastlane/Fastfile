@@ -39,8 +39,10 @@ platform :ios do
       is_key_content_base64: false
     )
 
-    # 初回だけ変数 MATCH_READONLY=false で実行し、証明書とプロファイルを作る
-    match(api_key: api_key, readonly: ENV["MATCH_READONLY"] != "false")
+    # 初回だけ、手動実行で「証明書とプロファイルを新しく作る」にチェックして実行する
+    create_certs = ENV["MATCH_READONLY"].to_s.strip.downcase == "false"
+    UI.message(create_certs ? "証明書を作成するモードで実行します" : "証明書は読み取りのみで実行します")
+    match(api_key: api_key, readonly: !create_certs)
 
     profile_name = ENV["sigh_#{APP_ID}_appstore_profile-name"]
 

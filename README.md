@@ -61,10 +61,9 @@ Base64 は Windows の PowerShell で作れる。
 
 個人アクセストークンには、`rindo-certificates` の読み書き権限だけを付ける。
 
-3. Variables に `MATCH_READONLY` = `false` を登録する（初回だけ）
-4. Actions タブで「TestFlight」ワークフローを手動実行する。証明書とプロファイルが作られ、ビルドが TestFlight に送られる
-5. 成功したら `MATCH_READONLY` を削除する
-6. App Store Connect 側の処理が終わると、iPhone の TestFlight アプリに表示される。インストールして「林道アプリ 試作」とビルド番号が出れば手順0は完了
+3. Actions タブで「TestFlight」→「Run workflow」を開き、「証明書とプロファイルを新しく作る」に**チェックを入れて**実行する。証明書とプロファイルが作られ、ビルドが TestFlight に送られる
+4. 2回目以降はチェックなしで実行する（main への push でも自動で動く）
+5. App Store Connect 側の処理が終わると、iPhone の TestFlight アプリに表示される。インストールして「林道アプリ 試作」とビルド番号が出れば手順0は完了
 
 ## 普段の流れ
 
