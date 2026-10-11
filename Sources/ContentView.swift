@@ -5,6 +5,7 @@ import CoreLocation
 /// 線をタップすると区間の情報が出る。
 struct ContentView: View {
     @StateObject private var store = SegmentStore()
+    @StateObject private var offline = OfflineMapStore()
     @State private var selected: MapView.SegmentInfo?
     @State private var location = LocationPermission()
 
@@ -22,6 +23,21 @@ struct ContentView: View {
                     SegmentCard(info: s) { selected = nil }
                 }
                 Legend()
+                HStack(alignment: .center, spacing: 8) {
+                    Button {
+                        offline.download()
+                    } label: {
+                        Label(offline.isComplete ? "保存済み" : "地図をオフライン用に保存",
+                              systemImage: offline.isComplete ? "checkmark.circle" : "arrow.down.circle")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(offline.isDownloading || offline.isComplete)
+                    if offline.isDownloading { ProgressView() }
+                }
+                .font(.subheadline)
+                Text(offline.status)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 HStack(alignment: .top) {
                     Text(store.status)
                         .textSelection(.enabled)

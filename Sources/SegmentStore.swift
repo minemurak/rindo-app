@@ -37,12 +37,18 @@ final class SegmentStore: ObservableObject {
         let started = Date()
         do {
             let raw = try await client.rpc("segments_in_bbox", params: Self.bbox).execute().data
-            let ms = Int(Date().timeIntervalSince(started) * 1000)
+            let firstMs = Int(Date().timeIntervalSince(started) * 1000)
             let prepared = try Self.prepareForMap(raw)
             try prepared.write(to: cacheURL, options: .atomic)
             geojson = prepared
-            status = "オンライン：\(Self.featureCount(prepared))区間を取得（\(ms)ミリ秒）"
-            print("[RindoApp] segments_in_bbox: \(ms) ms")
+            status = "オンライン：\(Self.featureCount(prepared))区間（初回 \(firstMs)ミリ秒／2回目 計測中）"
+
+            // 合格条件（1秒以内）の判定用に、接続が確立した状態でもう1回測る
+            let second = Date()
+            _ = try await client.rpc("segments_in_bbox", params: Self.bbox).execute().data
+            let secondMs = Int(Date().timeIntervalSince(second) * 1000)
+            status = "オンライン：\(Self.featureCount(prepared))区間（初回 \(firstMs)ミリ秒／2回目 \(secondMs)ミリ秒）"
+            print("[RindoApp] segments_in_bbox: first \(firstMs) ms, second \(secondMs) ms")
         } catch {
             print("[RindoApp] fetch failed: \(error)")
             // 原因の切り分け用に、失敗理由を画面に出す
