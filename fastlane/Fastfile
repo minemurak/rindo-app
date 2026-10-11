@@ -30,6 +30,11 @@ default_platform(:ios)
 
 platform :ios do
   lane :beta do
+    # 初回だけ、手動実行で「証明書とプロファイルを新しく作る」にチェックして実行する。
+    # setup_ci が MATCH_READONLY を true に書き換えるため、必ずその前に読む。
+    create_certs = ENV["MATCH_READONLY"].to_s.strip.downcase == "false"
+    UI.important(create_certs ? "証明書を作成するモードで実行します" : "証明書は読み取りのみで実行します")
+
     setup_ci
 
     api_key = app_store_connect_api_key(
@@ -39,9 +44,6 @@ platform :ios do
       is_key_content_base64: false
     )
 
-    # 初回だけ、手動実行で「証明書とプロファイルを新しく作る」にチェックして実行する
-    create_certs = ENV["MATCH_READONLY"].to_s.strip.downcase == "false"
-    UI.message(create_certs ? "証明書を作成するモードで実行します" : "証明書は読み取りのみで実行します")
     match(api_key: api_key, readonly: !create_certs)
 
     profile_name = ENV["sigh_#{APP_ID}_appstore_profile-name"]
