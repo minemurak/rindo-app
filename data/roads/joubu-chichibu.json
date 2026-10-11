@@ -1,0 +1,32 @@
+{
+  "slug": "joubu-chichibu",
+  "road": "上武秩父線",
+  "kind": "林道",
+  "administrator": { "name": "秩父農林振興センター", "kind": "県" },
+  "osm_file": "data/osm/joubu-chichibu.geojson",
+  "osm_name": "林道上武秩父線",
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [
+    { "name": "風早峠", "lon": 139.043635188509, "lat": 36.1078289595316,
+      "source": "国土地理院 地名検索" },
+    { "name": "更木線分岐", "lon": 139.0535812, "lat": 36.1218949,
+      "source": "秩父農林振興センターの位置図（令和8年6月1日）を座標に合わせた推定。誤差約150m" }
+  ],
+  "segments": [
+    { "note": "西端（県道71号側）〜風早峠", "surface": null, "general_access": "可" },
+    { "note": "風早峠〜更木線分岐", "surface": "舗装", "general_access": "可" },
+    { "note": "更木線分岐〜東端（皆野町道・県道44号側）", "surface": "舗装", "general_access": "可" }
+  ],
+  "restrictions": [
+    { "segment": 1, "kind": "大型車通行止め",
+      "source_url": "https://www.pref.saitama.lg.jp/b0904/tukoseigen/index.html",
+      "fetched_at": "2026-10-11 12:30+09" }
+  ],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）",
+    "風早峠：国土地理院 地名データ",
+    "更木線分岐：秩父農林振興センターの位置図（令和8年6月1日）からの推定、誤差約150m",
+    "通行可否と規制：秩父農林振興センター 路線別詳細（令和8年5月20日現在）"
+  ]
+}
