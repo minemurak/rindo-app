@@ -1,0 +1,6 @@
+# 署名用の証明書とプロファイルの保管先（必ず非公開リポジトリにする）
+
+git_url("https://github.com/minemurak/rindo-certificates.git")
+storage_mode("git")
+type("appstore")
+app_identifier(["com.minemurak.ridomap"])

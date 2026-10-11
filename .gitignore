@@ -1,0 +1,23 @@
+# XcodeGenで生成するもの（リポジトリに入れない）
+RindoApp.xcodeproj/
+Sources/Info.plist
+
+# ビルド時にSecretsから書き出す接続情報
+Sources/Secrets.swift
+
+# 鍵・証明書・プロファイル（絶対にコミットしない）
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
+# ビルド成果物など
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+.DS_Store

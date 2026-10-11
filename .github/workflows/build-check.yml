@@ -1,0 +1,39 @@
+# main 以外のブランチへの push とプルリクエストで、署名なしのビルドだけを行う。
+# TestFlight へは送らないので、文法エラーの確認が速い。
+name: Build check
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcodeのバージョンを指定
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: 接続情報をファイルに書き出す（未設定ならダミー値）
+        run: |
+          cat > Sources/Secrets.swift <<SWIFT
+          enum Secrets {
+              static let supabaseURL = "${{ secrets.SUPABASE_URL || 'https://example.supabase.co' }}"
+              static let supabaseAnonKey = "${{ secrets.SUPABASE_ANON_KEY || 'dummy' }}"
+          }
+          SWIFT
+
+      - name: ツールを入れてXcodeプロジェクトを生成
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: 署名なしでビルド
+        run: |
+          xcodebuild -project RindoApp.xcodeproj -scheme RindoApp \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO build

@@ -1,0 +1,43 @@
+# main への push（または手動実行）で、ビルド・署名して TestFlight へ送る。
+name: TestFlight
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  beta:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcodeのバージョンを指定
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: 接続情報をファイルに書き出す
+        run: |
+          cat > Sources/Secrets.swift <<SWIFT
+          enum Secrets {
+              static let supabaseURL = "${{ secrets.SUPABASE_URL }}"
+              static let supabaseAnonKey = "${{ secrets.SUPABASE_ANON_KEY }}"
+          }
+          SWIFT
+
+      - name: ツールを入れてXcodeプロジェクトを生成
+        run: |
+          brew install xcodegen fastlane
+          xcodegen generate
+
+      - name: ビルドしてTestFlightへ送る
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_READONLY: ${{ vars.MATCH_READONLY }}
+        run: fastlane beta
