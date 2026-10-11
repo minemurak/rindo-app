@@ -1,0 +1,20 @@
+{
+  "slug": "jomine-1",
+  "road": "城峰1号線",
+  "kind": "林道",
+  "administrator": { "name": "秩父農林振興センター", "kind": "県" },
+  "osm_file": "data/osm/jomine-1.geojson",
+  "osm_name": "林道城峯1号線",
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [],
+  "segments": [
+    { "note": "上武秩父線分岐〜南端（県道284号側）", "surface": null, "general_access": "可" }
+  ],
+  "restrictions": [],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）。OSM 上の名称は「林道城峯1号線」（way/122479227）",
+    "通行可否：秩父農林振興センター 森林管理道の通行制限情報（2026年10月11日閲覧）の通行制限路線に含まれないため「可」",
+    "接続：北端は上武秩父線と接続（OSM で一致を確認）。南端は県道284号（下日野沢東門平吉田線）側、県の路線別詳細による"
+  ]
+}
