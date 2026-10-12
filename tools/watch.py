@@ -25,7 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 WATCH = ROOT / "data" / "watch"
-UA = "rindo-app/0.1 (github.com/minemurak/rindo-app; 通行止め情報の更新確認、1日1回)"
+UA = "rindo-app/0.1 (github.com/minemurak/rindo-app; checks road-closure pages once a day)"
 FAIL_LIMIT = 3
 
 
@@ -73,6 +73,7 @@ class TextAndLinks(HTMLParser):
 
 
 def fetch(url: str) -> bytes:
+    url = urllib.parse.quote(url, safe=":/?&=%#()+,;@!~*'")  # 日本語を含む URL に備える
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=60) as res:
         return res.read()
