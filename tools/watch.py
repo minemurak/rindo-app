@@ -139,9 +139,11 @@ def main(argv=None):
         try:
             new = snapshot(src)
         except Exception as e:  # 取得失敗：前回の内容を残す
-            failures[src["id"]] = failures.get(src["id"], 0) + 1
-            print(f"失敗：{src['id']}（{failures[src['id']]}回目）{e}")
-            if failures[src["id"]] == FAIL_LIMIT:
+            prev = failures.get(src["id"], {})
+            count = (prev.get("count", 0) if isinstance(prev, dict) else int(prev)) + 1
+            failures[src["id"]] = {"count": count, "error": f"{type(e).__name__}: {str(e)[:300]}"}
+            print(f"失敗：{src['id']}（{count}回目）{e}")
+            if count == FAIL_LIMIT:
                 report.append(f"## 取得できません：{src['name']}\n\n{FAIL_LIMIT}日続けて取得に失敗しました。"
                               f"ページの場所が変わった可能性があります。\n\n- {src['url']}\n- エラー：`{str(e)[:200]}`\n")
             continue
