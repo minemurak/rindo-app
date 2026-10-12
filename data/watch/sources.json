@@ -6,38 +6,72 @@
       "name": "埼玉県 秩父農林振興センター 森林管理道の通行制限情報",
       "url": "https://www.pref.saitama.lg.jp/b0904/tukoseigen/index.html",
       "pdf_link": "路線別|詳細|通行",
-      "roads": ["joubu-chichibu", "jomine-1", "minoyama", "futagoyama", "ueno-otaki"]
+      "roads": [
+        "joubu-chichibu",
+        "jomine-1",
+        "minoyama",
+        "futagoyama",
+        "ueno-otaki"
+      ],
+      "start": "^ページ番号：",
+      "end": "^お問い合わせ$"
     },
     {
       "id": "saitama-kawagoe",
       "name": "埼玉県 川越農林振興センター 森林管理道の通行止め情報",
       "url": "https://www.pref.saitama.lg.jp/b0902/forestry/road-closed.html",
-      "roads": ["hirasaka-tobimura", "tochiyadani", "karibazaka", "gongendo"]
+      "roads": [
+        "hirasaka-tobimura",
+        "tochiyadani",
+        "karibazaka",
+        "gongendo"
+      ],
+      "start": "^ページ番号：",
+      "end": "^お問い合わせ$"
     },
     {
       "id": "tokyo-forestry",
       "name": "東京都森林事務所 森林事務所管理林道の通行規制",
       "url": "https://forestry-office.metro.tokyo.lg.jp/about/rin/rin_kisei/index.html",
       "pdf_link": "通行状況",
-      "roads": ["tokyo-*"]
+      "roads": [
+        "tokyo-*"
+      ],
+      "start": "^森林事務所管理林道の通行規制について$"
     },
     {
       "id": "gunma-uenomura",
       "name": "上野村 通行止めのお知らせ",
       "url": "https://www.uenomura.jp/admin/life/seikatsu/road/tsukoudome.html",
-      "roads": ["mikabo-super", "yakyuzawa", "ushiroyama", "kamakake", "ueno-otaki"]
+      "roads": [
+        "mikabo-super",
+        "yakyuzawa",
+        "ushiroyama",
+        "kamakake",
+        "ueno-otaki"
+      ],
+      "start": "時点の通行止め情報",
+      "end": "^よく使われるページから探す"
     },
     {
       "id": "gunma-kanna-winter",
       "name": "神流町 冬季通行止め情報",
       "url": "https://www.town.kanna.gunma.jp/soshiki/sangyokensetsuka/3/4/1169.html",
-      "roads": ["mikabo-super"]
+      "roads": [
+        "mikabo-super"
+      ],
+      "start": "^更新日：",
+      "end": "この記事に関するお問い合わせ先"
     },
     {
       "id": "gunma-fujioka-mikabo",
       "name": "藤岡市 御荷鉾スーパー林道冬季閉鎖のお知らせ",
       "url": "https://www.city.fujioka.gunma.jp/soshiki/toshikensetsubu/doboku/3/1147.html",
-      "roads": ["mikabo-super"]
+      "roads": [
+        "mikabo-super"
+      ],
+      "start": "^更新日：",
+      "end": "この記事に関するお問い合わせ先"
     }
   ]
 }

@@ -102,11 +102,18 @@ def snapshot(src: dict) -> str:
     page = TextAndLinks()
     page.feed(decode(fetch(src["url"])))
     text = page.text()
-    # 本文のうち、start〜end の間だけを見る（メニューや「よくある質問」などの変化で知らせないため）
-    if src.get("start") and src["start"] in text:
-        text = text[text.index(src["start"]):]
-    if src.get("end") and src["end"] in text:
-        text = text[:text.index(src["end"])]
+    # 本文のうち、start の行から end の行の手前までだけを見る（メニューやアンケート欄の変化で知らせないため）。
+    # start・end は正規表現。見つからなければ切らずに全体を見る
+    lines = text.splitlines()
+    if src.get("start"):
+        hit = next((i for i, l in enumerate(lines) if re.search(src["start"], l)), None)
+        if hit is not None:
+            lines = lines[hit:]
+    if src.get("end"):
+        hit = next((i for i, l in enumerate(lines) if i > 0 and re.search(src["end"], l)), None)
+        if hit is not None:
+            lines = lines[:hit]
+    text = "\n".join(lines)
     parts = [f"# {src['name']}\n# {src['url']}\n", text]
     if src.get("pdf_link"):
         pattern = re.compile(src["pdf_link"])
