@@ -14,6 +14,16 @@ struct MapView: UIViewRepresentable {
         let access: String
         let surface: String
         let restriction: String
+        /// 林道の両端（外部ナビの目的地）。現在地に近い方が先
+        let ends: [RoadEnd]
+    }
+
+    /// 林道の端：外部ナビの目的地にする
+    struct RoadEnd: Equatable {
+        let label: String          // 「西側の端」など
+        let latitude: Double
+        let longitude: Double
+        let distanceKm: Double?    // 現在地からの直線距離（現在地が分からないときは nil）
     }
 
     static let sourceID = "segments"
@@ -100,13 +110,55 @@ struct MapView: UIViewRepresentable {
             let rect = CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44)
             let feature = map.visibleFeatures(in: rect, styleLayerIdentifiers: MapView.layerIDs).first
             guard let attrs = feature?.attributes else { onSelect(nil); return }
+            let road = attrs["road"] as? String ?? ""
             onSelect(SegmentInfo(
-                road: attrs["road"] as? String ?? "",
+                road: road,
                 note: attrs["note"] as? String ?? "",
                 access: attrs["access"] as? String ?? "不明",
                 surface: attrs["surface"] as? String ?? "不明",
-                restriction: attrs["restriction_text"] as? String ?? ""
+                restriction: attrs["restriction_text"] as? String ?? "",
+                ends: roadEnds(of: road, from: map.userLocation?.location)
             ))
+        }
+
+        /// 林道の両端を求める。地図に描いた線は表示用に切り詰められていることがあるため、元の GeoJSON から取る。
+        /// 区間の端点のうち、いちばん離れた2点を林道の両端とみなす。
+        func roadEnds(of road: String, from user: CLLocation?) -> [RoadEnd] {
+            guard let data = segments,
+                  let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let features = root["features"] as? [[String: Any]] else { return [] }
+            var points: [CLLocation] = []
+            for f in features where (f["properties"] as? [String: Any])?["road"] as? String == road {
+                guard let coords = (f["geometry"] as? [String: Any])?["coordinates"] as? [[Double]],
+                      let first = coords.first, let last = coords.last,
+                      first.count >= 2, last.count >= 2 else { continue }
+                points.append(CLLocation(latitude: first[1], longitude: first[0]))
+                points.append(CLLocation(latitude: last[1], longitude: last[0]))
+            }
+            guard points.count >= 2 else { return [] }
+            var best = (points[0], points[1], -1.0)
+            for i in points.indices {
+                for j in points.indices where j > i {
+                    let d = points[i].distance(from: points[j])
+                    if d > best.2 { best = (points[i], points[j], d) }
+                }
+            }
+            let (a, b, _) = best
+            // 東西・南北のうち離れている向きで呼び分ける
+            let dLon = abs(a.coordinate.longitude - b.coordinate.longitude) * cos(a.coordinate.latitude * .pi / 180)
+            let dLat = abs(a.coordinate.latitude - b.coordinate.latitude)
+            func label(_ p: CLLocation, _ q: CLLocation) -> String {
+                if dLon >= dLat { return p.coordinate.longitude < q.coordinate.longitude ? "西側の端" : "東側の端" }
+                return p.coordinate.latitude > q.coordinate.latitude ? "北側の端" : "南側の端"
+            }
+            var ends = [
+                RoadEnd(label: label(a, b), latitude: a.coordinate.latitude, longitude: a.coordinate.longitude,
+                        distanceKm: user.map { $0.distance(from: a) / 1000 }),
+                RoadEnd(label: label(b, a), latitude: b.coordinate.latitude, longitude: b.coordinate.longitude,
+                        distanceKm: user.map { $0.distance(from: b) / 1000 }),
+            ]
+            if let d0 = ends[0].distanceKm, let d1 = ends[1].distanceKm, d1 < d0 { ends.reverse() }
+            return ends
         }
     }
 

@@ -97,8 +97,11 @@ private struct SegmentCard: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.orange)
             }
+            HStack(spacing: 8) {
+                if !info.ends.isEmpty { NaviMenu(info: info) }
+            }
+            .padding(.top, 4)
             offlineRow
-                .padding(.top, 4)
             Text("通行の可否は、必ず現地の標識と管理者の最新情報で確認してください")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -134,6 +137,54 @@ private struct SegmentCard: View {
             }
         }
         .font(.subheadline)
+    }
+}
+
+/// 外部のナビアプリで、林道の端までの道案内を始める。
+/// 目的地は林道の端（入口）。林道の中は案内させず、走れるかどうかは現地で判断してもらう。
+private struct NaviMenu: View {
+    let info: MapView.SegmentInfo
+
+    var body: some View {
+        Menu {
+            if info.access == "不可" || !info.restriction.isEmpty {
+                Text("この区間には通行止め・走行禁止などがあります。現地の標識と管理者の情報を確認してください")
+            }
+            ForEach(Array(info.ends.enumerated()), id: \.offset) { index, end in
+                Section(title(of: end, nearest: index == 0)) {
+                    if let url = appleMapsURL(end) {
+                        Link(destination: url) { Label("Apple マップ", systemImage: "map") }
+                    }
+                    if let url = googleMapsURL(end) {
+                        Link(destination: url) { Label("Google マップ", systemImage: "car") }
+                    }
+                }
+            }
+        } label: {
+            Label("ナビで行く", systemImage: "arrow.triangle.turn.up.right.diamond")
+        }
+        .buttonStyle(.bordered)
+        .font(.subheadline)
+    }
+
+    private func title(of end: MapView.RoadEnd, nearest: Bool) -> String {
+        guard let km = end.distanceKm else { return end.label }
+        return String(format: "%@（直線 約%.0fkm%@）", end.label, km, nearest ? "・近い方" : "")
+    }
+
+    private func appleMapsURL(_ end: MapView.RoadEnd) -> URL? {
+        var c = URLComponents(string: "https://maps.apple.com/")
+        c?.queryItems = [URLQueryItem(name: "daddr", value: "\(end.latitude),\(end.longitude)"),
+                         URLQueryItem(name: "dirflg", value: "d")]
+        return c?.url
+    }
+
+    private func googleMapsURL(_ end: MapView.RoadEnd) -> URL? {
+        var c = URLComponents(string: "https://www.google.com/maps/dir/")
+        c?.queryItems = [URLQueryItem(name: "api", value: "1"),
+                         URLQueryItem(name: "destination", value: "\(end.latitude),\(end.longitude)"),
+                         URLQueryItem(name: "travelmode", value: "driving")]
+        return c?.url
     }
 }
 
