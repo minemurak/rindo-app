@@ -1,8 +1,8 @@
 import SwiftUI
 import CoreLocation
 
-/// 手順3の画面：上武秩父線を地図に重ねて表示する。
-/// 線をタップすると区間の情報が出る。
+/// 林道を地図に重ねて表示する画面。
+/// 線をタップすると区間の情報が出て、その林道沿いの地図をオフライン用に保存できる。
 struct ContentView: View {
     @StateObject private var store = SegmentStore()
     @StateObject private var offline = OfflineMapStore()
@@ -20,22 +20,13 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 if let s = selected {
-                    SegmentCard(info: s) { selected = nil }
+                    SegmentCard(info: s, offline: offline.state(of: s.road),
+                                onSave: { offline.download(road: s.road) },
+                                onRemove: { offline.remove(road: s.road) },
+                                onClose: { selected = nil })
                 }
                 Legend()
-                HStack(alignment: .center, spacing: 8) {
-                    Button {
-                        offline.download(segments: store.geojson)
-                    } label: {
-                        Label(offline.isComplete ? "保存済み" : (offline.needsUpdate ? "地図を保存し直す" : "林道沿いの地図を保存"),
-                              systemImage: offline.isComplete ? "checkmark.circle" : "arrow.down.circle")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(offline.isDownloading || offline.isComplete)
-                    if offline.isDownloading { ProgressView() }
-                }
-                .font(.subheadline)
-                Text(offline.status)
+                Text(offline.summary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack(alignment: .top) {
@@ -66,6 +57,9 @@ struct ContentView: View {
 
 private struct SegmentCard: View {
     let info: MapView.SegmentInfo
+    let offline: OfflineMapStore.RoadState
+    let onSave: () -> Void
+    let onRemove: () -> Void
     let onClose: () -> Void
 
     var body: some View {
@@ -85,11 +79,43 @@ private struct SegmentCard: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.orange)
             }
+            offlineRow
+                .padding(.top, 4)
             Text("通行の可否は、必ず現地の標識と管理者の最新情報で確認してください")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
         .padding(.bottom, 4)
+    }
+
+    /// この林道沿いの地図の保存状態と操作
+    @ViewBuilder private var offlineRow: some View {
+        let mb = String(format: "%.1fMB", Double(offline.bytes) / 1_048_576)
+        HStack(spacing: 8) {
+            switch offline.kind {
+            case .none:
+                Button(action: onSave) { Label("この林道の地図を保存", systemImage: "arrow.down.circle") }
+                    .buttonStyle(.borderedProminent)
+            case .downloading:
+                ProgressView(value: Double(offline.percent), total: 100)
+                    .frame(maxWidth: 140)
+                Text("保存中 \(offline.percent)%").font(.caption)
+            case .paused:
+                Button(action: onSave) { Label("保存を再開（\(offline.percent)%）", systemImage: "arrow.clockwise") }
+                    .buttonStyle(.bordered)
+            case .complete:
+                Label("保存済み（\(mb)）", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.subheadline)
+                Spacer()
+                Button(role: .destructive, action: onRemove) { Text("削除") }
+                    .buttonStyle(.bordered)
+            case .outdated:
+                Button(action: onSave) { Label("線が更新されたため保存し直す", systemImage: "arrow.triangle.2.circlepath") }
+                    .buttonStyle(.borderedProminent)
+            }
+        }
+        .font(.subheadline)
     }
 }
 
