@@ -44,7 +44,9 @@ platform :ios do
       is_key_content_base64: false
     )
 
-    match(api_key: api_key, readonly: !create_certs)
+    # 証明書を作り直すとき（チェックを入れて実行）は、プロファイルも作り直す。
+    # App ID に機能（Apple でサインインなど）を足したあとは、これで新しいプロファイルになる
+    match(api_key: api_key, readonly: !create_certs, force: create_certs)
 
     profile_name = ENV["sigh_#{APP_ID}_appstore_profile-name"]
 

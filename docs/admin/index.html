@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>林道アプリ 管理</title>
+<style>
+  :root { --bg:#f6f7f5; --card:#fff; --text:#1d2420; --muted:#66706a; --line:#dde2de; --accent:#2f6b4f; --warn:#b5651d; --danger:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141816; --card:#1d2320; --text:#e6ebe8; --muted:#9aa5a0; --line:#2e3632; --accent:#7cc4a0; --warn:#e3a35f; --danger:#f2867e; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 system-ui, -apple-system, "Hiragino Sans", sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 8px 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
+  label { display:block; font-size:13px; color:var(--muted); margin-top:8px; }
+  input { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--text); font:inherit; }
+  button { font:inherit; padding:6px 12px; border-radius:6px; border:1px solid var(--line); background:var(--card); color:var(--text); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.danger { color:var(--danger); border-color:var(--danger); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tabs button[aria-selected="true"] { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .meta { font-size:13px; color:var(--muted); }
+  .badge { display:inline-block; font-size:12px; padding:1px 8px; border-radius:99px; border:1px solid currentColor; }
+  .hidden { color:var(--warn); } .banned { color:var(--danger); }
+  .body { white-space:pre-wrap; margin:8px 0; }
+  #status { min-height:1.6em; color:var(--muted); font-size:13px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>林道アプリ 口コミ管理</h1>
+
+  <section id="setup" class="card" hidden>
+    <p class="meta">最初に一度だけ入力します（このブラウザにだけ保存）。Supabase の Project Settings → API にある値です。</p>
+    <label>Project URL<input id="url" placeholder="https://xxxx.supabase.co"></label>
+    <label>Publishable key（sb_publishable_…）<input id="key"></label>
+    <div class="row" style="margin-top:12px"><button class="primary" id="saveCfg">保存</button></div>
+  </section>
+
+  <section id="login" class="card" hidden>
+    <label>管理者のメールアドレス<input id="email" type="email" autocomplete="username"></label>
+    <label>パスワード<input id="password" type="password" autocomplete="current-password"></label>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="signIn">サインイン</button>
+      <button id="resetCfg">接続先を入れ直す</button>
+    </div>
+  </section>
+
+  <section id="app" hidden>
+    <div class="row" style="margin-bottom:12px">
+      <div class="row tabs" role="tablist">
+        <button role="tab" data-tab="queue" aria-selected="true">確認待ち</button>
+        <button role="tab" data-tab="recent" aria-selected="false">最近14日の口コミ</button>
+      </div>
+      <span style="flex:1"></span>
+      <button id="reload">再読み込み</button>
+      <button id="signOut">サインアウト</button>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <p id="status"></p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+let client = null;
+let tab = "queue";
+
+function status(text, isError) { $("status").textContent = text || ""; $("status").style.color = isError ? "var(--danger)" : ""; }
+function show(id) { for (const s of ["setup", "login", "app"]) $(s).hidden = s !== id; }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
+
+async function start() {
+  const url = store.get("rindo.url"), key = store.get("rindo.key");
+  if (!url || !key) { show("setup"); return; }
+  client = supabase.createClient(url, key);
+  const { data } = await client.auth.getSession();
+  if (data.session) { show("app"); load(); } else { show("login"); }
+}
+
+$("saveCfg").onclick = () => {
+  store.set("rindo.url", $("url").value.trim().replace(/\/+$/, "").replace(/\/rest\/v1$/, ""));
+  store.set("rindo.key", $("key").value.trim());
+  start();
+};
+$("resetCfg").onclick = () => { store.del("rindo.url"); store.del("rindo.key"); show("setup"); };
+$("signIn").onclick = async () => {
+  status("サインイン中…");
+  const { error } = await client.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  if (error) { status("サインインできません：" + error.message, true); return; }
+  status(""); show("app"); load();
+};
+$("signOut").onclick = async () => { await client.auth.signOut(); show("login"); };
+$("reload").onclick = () => load();
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x === b));
+  load();
+});
+
+async function load() {
+  status("読み込み中…");
+  const { data, error } = tab === "queue"
+    ? await client.rpc("admin_review_queue")
+    : await client.rpc("admin_recent_reviews", { days: 14 });
+  if (error) { status("読み込めません：" + error.message + "（管理者として登録されているか確認）", true); $("list").innerHTML = ""; return; }
+  status(data.length ? `${data.length} 件` : (tab === "queue" ? "確認待ちの口コミはありません" : "最近の口コミはありません"));
+  $("list").innerHTML = data.map(r => `
+    <article class="card" data-id="${r.id}" data-author="${esc(r.author_id)}">
+      <div class="row">
+        <strong>${esc(r.road)}</strong>
+        <span class="badge">${esc(r.condition)}</span>
+        ${r.hidden ? '<span class="badge hidden">非表示中</span>' : ""}
+        ${r.report_count ? `<span class="badge hidden">通報 ${r.report_count}</span>` : ""}
+        ${r.banned ? '<span class="badge banned">利用停止中</span>' : ""}
+      </div>
+      <div class="body">${esc(r.body)}</div>
+      <div class="meta">走行日 ${esc(r.driven_on)}・投稿 ${new Date(r.created_at).toLocaleString("ja-JP")}・投稿者 ${esc(r.author_id).slice(0, 8)}${r.reasons ? "・通報理由 " + esc(r.reasons) : ""}</div>
+      <div class="row" style="margin-top:10px">
+        ${r.hidden ? '<button data-act="show">問題なし：表示に戻す</button>' : '<button data-act="hide">隠す</button>'}
+        <button class="danger" data-act="delete">削除</button>
+        ${r.banned ? "" : '<button class="danger" data-act="ban">投稿者を利用停止</button>'}
+      </div>
+    </article>`).join("");
+}
+
+$("list").onclick = async (e) => {
+  const btn = e.target.closest("button[data-act]"); if (!btn) return;
+  const card = btn.closest("article"); const id = Number(card.dataset.id); const author = card.dataset.author;
+  const act = btn.dataset.act;
+  if ((act === "delete" || act === "ban") && !confirm(act === "delete" ? "この口コミを削除しますか？" : "この投稿者の投稿と通報を止めますか？")) return;
+  let error;
+  if (act === "show") {
+    ({ error } = await client.from("reviews").update({ hidden: false, report_count: 0 }).eq("id", id));
+    if (!error) ({ error } = await client.from("review_reports").delete().eq("review_id", id));
+  } else if (act === "hide") {
+    ({ error } = await client.from("reviews").update({ hidden: true }).eq("id", id));
+  } else if (act === "delete") {
+    ({ error } = await client.from("reviews").delete().eq("id", id));
+  } else if (act === "ban") {
+    const reason = prompt("利用停止の理由（記録用）", "規約違反の投稿") ?? "";
+    ({ error } = await client.from("banned_users").insert({ user_id: author, reason }));
+    if (!error) ({ error } = await client.from("reviews").update({ hidden: true }).eq("user_id", author));
+  }
+  if (error) { status("できませんでした：" + error.message, true); return; }
+  load();
+};
+
+start();
+</script>
+</body>
+</html>

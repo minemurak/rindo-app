@@ -100,3 +100,12 @@ GitHub Actions の「Watch closures」が毎朝 5:47（日本時間）に、`dat
 - Issue を見て、必要なら `data/roads/` の設定を直し、`python3 tools/road.py build`・`bundle` を実行し、Supabase で `supabase/all-roads.sql` を実行する。終わったら Issue を閉じる
 - 見に行くページを増やすときは `sources.json` に足す。`start`・`end`（正規表現）で本文の範囲を決めると、メニューなどの変化で知らせなくなる
 - リポジトリに60日間更新がないと、GitHub が毎日の実行を止める。止まったら Actions タブで「Enable workflow」を押す
+
+## 口コミ
+
+- データベース：`supabase/reviews.sql`（schema.sql のあとに SQL Editor で実行）
+- 読むのはサインインなしで誰でも。書く・通報・ブロックは「Apple でサインイン」が必要
+- 投稿はすぐ公開。通報が3件たまると自動で非表示。1人1日10件まで
+- 管理画面：`docs/admin/index.html`（GitHub Pages で https://minemurak.github.io/rindo-app/admin/ に公開）。確認待ち（通報・非表示）の口コミを、表示に戻す・削除・投稿者の利用停止ができる
+- 管理者：Supabase の Authentication → Users で自分のメールアドレスとパスワードのユーザーを作り、SQL Editor で
+  `insert into admins select id from auth.users where email = '自分のアドレス';` を実行する
