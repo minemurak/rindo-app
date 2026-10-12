@@ -1,0 +1,44 @@
+# 通行止め情報のページを毎朝確認し、変わっていたら Issue を立てる（Issue の通知メールで気づける）。
+# 手動で動かすときは Actions タブ →「Watch closures」→「Run workflow」。
+name: Watch closures
+
+on:
+  schedule:
+    - cron: "47 20 * * *"   # 毎日 5:47（日本時間）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency: watch
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PDF を文字にする道具を入れる
+        run: sudo apt-get install -y -qq poppler-utils >/dev/null
+
+      - name: ページを確認
+        run: python3 tools/watch.py | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: 変化があれば Issue を立てる
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f data/watch/changes.md ]; then
+            gh issue create --title "通行止め情報の更新 $(TZ=Asia/Tokyo date +%Y-%m-%d)" --body-file data/watch/changes.md
+          fi
+
+      - name: 保存した内容をコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/watch
+          if git diff --cached --quiet; then echo "変更なし"; exit 0; fi
+          git commit -m "通行止め情報のページを確認 $(TZ=Asia/Tokyo date +%Y-%m-%d) [skip ci]"
+          git pull --rebase
+          git push

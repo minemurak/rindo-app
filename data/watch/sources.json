@@ -1,0 +1,43 @@
+{
+  "_説明": "毎日見に行く通行止め情報のページ。内容が変わったら Issue で知らせる。tools/watch.py が使う",
+  "sources": [
+    {
+      "id": "saitama-chichibu",
+      "name": "埼玉県 秩父農林振興センター 森林管理道の通行制限情報",
+      "url": "https://www.pref.saitama.lg.jp/b0904/tukoseigen/index.html",
+      "pdf_link": "路線別|詳細|通行",
+      "roads": ["joubu-chichibu", "jomine-1", "minoyama", "futagoyama", "ueno-otaki"]
+    },
+    {
+      "id": "saitama-kawagoe",
+      "name": "埼玉県 川越農林振興センター 森林管理道の通行止め情報",
+      "url": "https://www.pref.saitama.lg.jp/b0902/forestry/road-closed.html",
+      "roads": ["hirasaka-tobimura", "tochiyadani", "karibazaka", "gongendo"]
+    },
+    {
+      "id": "tokyo-forestry",
+      "name": "東京都森林事務所 森林事務所管理林道の通行規制",
+      "url": "https://forestry-office.metro.tokyo.lg.jp/about/rin/rin_kisei/index.html",
+      "pdf_link": "通行状況",
+      "roads": ["tokyo-*"]
+    },
+    {
+      "id": "gunma-uenomura",
+      "name": "上野村 通行止めのお知らせ",
+      "url": "https://www.uenomura.jp/admin/life/seikatsu/road/tsukoudome.html",
+      "roads": ["mikabo-super", "yakyuzawa", "ushiroyama", "kamakake", "ueno-otaki"]
+    },
+    {
+      "id": "gunma-kanna-winter",
+      "name": "神流町 冬季通行止め情報",
+      "url": "https://www.town.kanna.gunma.jp/soshiki/sangyokensetsuka/3/4/1169.html",
+      "roads": ["mikabo-super"]
+    },
+    {
+      "id": "gunma-fujioka-mikabo",
+      "name": "藤岡市 御荷鉾スーパー林道冬季閉鎖のお知らせ",
+      "url": "https://www.city.fujioka.gunma.jp/soshiki/toshikensetsubu/doboku/3/1147.html",
+      "roads": ["mikabo-super"]
+    }
+  ]
+}
