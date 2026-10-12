@@ -6,6 +6,7 @@ import CoreLocation
 struct ContentView: View {
     @StateObject private var store = SegmentStore()
     @StateObject private var offline = OfflineMapStore()
+    @StateObject private var weather = WeatherStore()
     @State private var selected: MapView.SegmentInfo?
     @State private var location = LocationPermission()
 
@@ -21,6 +22,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 8) {
                 if let s = selected {
                     SegmentCard(info: s, offline: offline.state(of: s.road),
+                                weather: weather.state(of: s.road),
                                 onSave: { offline.download(road: s.road) },
                                 onRemove: { offline.remove(road: s.road) },
                                 onClose: { selected = nil })
@@ -52,12 +54,20 @@ struct ContentView: View {
         .onChange(of: store.geojson) { _, newValue in
             offline.sync(segments: newValue)
         }
+        .task(id: selected?.road) {
+            // 林道を選んだら、両端の中間地点の天気予報を取る
+            guard let s = selected, !s.ends.isEmpty else { return }
+            let lat = s.ends.map(\.latitude).reduce(0, +) / Double(s.ends.count)
+            let lon = s.ends.map(\.longitude).reduce(0, +) / Double(s.ends.count)
+            await weather.load(road: s.road, latitude: lat, longitude: lon)
+        }
     }
 }
 
 private struct SegmentCard: View {
     let info: MapView.SegmentInfo
     let offline: OfflineMapStore.RoadState
+    let weather: WeatherStore.State?
     let onSave: () -> Void
     let onRemove: () -> Void
     let onClose: () -> Void
@@ -97,6 +107,7 @@ private struct SegmentCard: View {
                     .font(.subheadline.bold())
                     .foregroundStyle(.orange)
             }
+            if let weather { WeatherRow(state: weather).padding(.top, 2) }
             HStack(spacing: 8) {
                 if !info.ends.isEmpty { NaviMenu(info: info) }
             }
@@ -137,6 +148,53 @@ private struct SegmentCard: View {
             }
         }
         .font(.subheadline)
+    }
+}
+
+/// 林道の天気：今日・明日・あさっての天気、降水確率、最高・最低気温と、路面の目安になる昨日の雨量
+private struct WeatherRow: View {
+    let state: WeatherStore.State
+
+    var body: some View {
+        switch state {
+        case .loading:
+            HStack(spacing: 6) { ProgressView(); Text("天気予報を取得中…") }
+                .font(.caption).foregroundStyle(.secondary)
+        case .failed(let message):
+            Text(message).font(.caption).foregroundStyle(.secondary)
+        case .loaded(let f):
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    ForEach(f.days) { day in
+                        let d = WeatherStore.describe(day.code)
+                        VStack(spacing: 2) {
+                            Text(day.label).font(.caption2).foregroundStyle(.secondary)
+                            Image(systemName: d.symbol)
+                                .symbolRenderingMode(.multicolor)
+                                .font(.title3)
+                                .accessibilityLabel(d.text)
+                            Text("\(Int(day.maxTemp.rounded()))° / \(Int(day.minTemp.rounded()))°")
+                                .font(.caption.monospacedDigit())
+                            Text(day.rainChance.map { "☂︎\($0)%" } ?? "☂︎—")
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle((day.rainChance ?? 0) >= 50 ? .blue : .secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                HStack {
+                    if let y = f.yesterdayRainMm {
+                        Text(y >= 1 ? String(format: "昨日の雨 %.0fmm：路面がぬかるんでいる可能性", y) : "昨日の雨 なし")
+                            .foregroundStyle(y >= 10 ? .orange : .secondary)
+                    }
+                    Spacer()
+                    Text(f.elevation.map { String(format: "標高約%.0fm・", $0) } ?? "")
+                        + Text("天気：Open-Meteo.com")
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 
