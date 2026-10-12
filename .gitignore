@@ -21,3 +21,6 @@ fastlane/Preview.html
 fastlane/screenshots/
 fastlane/test_output/
 .DS_Store
+
+# Python のキャッシュ
+__pycache__/

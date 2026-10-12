@@ -49,11 +49,12 @@ def line_length_m(coords) -> float:
     return sum(dist_m(a, b) for a, b in zip(coords, coords[1:]))
 
 
-def join_ways(ways: list[list[list[float]]], report: bool = False) -> list[list[float]]:
+def join_ways(ways: list[list[list[float]]], report: bool = False,
+              tolerance_m: float = JOIN_TOLERANCE_M) -> list[list[float]]:
     """複数の線（OSM の way）から、いちばん長くつながった1本の道を取り出す。
 
     線の頂点をつないだ網を作り、
-      - 端どうしが JOIN_TOLERANCE_M 以内なら同じ点とみなしてつなぐ（小さな途切れ）
+      - 端どうしが tolerance_m（既定 JOIN_TOLERANCE_M）以内なら同じ点とみなしてつなぐ（小さな途切れ）
       - 枝道（行き止まりの支線）があれば、最も長い経路だけを残す
       - 同じ名前の離れた道があれば、いちばん長いまとまりだけを使う
     残さなかった部分の長さは report=True のとき表示する。"""
@@ -71,7 +72,7 @@ def join_ways(ways: list[list[list[float]]], report: bool = False) -> list[list[
             if k in alias:
                 continue
             for q in endpoints:
-                if dist_m(k, q) <= JOIN_TOLERANCE_M:
+                if dist_m(k, q) <= tolerance_m:
                     alias[k] = q
                     break
             else:
@@ -273,7 +274,8 @@ def cmd_build(args):
             if f.get("properties", {}).get("@id") not in exclude]
     print(f"OSM から{label}の線を {len(ways)} 本読み込み")
 
-    coords = join_ways(ways, report=True)
+    # 県境やOSMの描き方で線が少し離れている道は、config の join_tolerance_m で許す距離を広げる
+    coords = join_ways(ways, report=True, tolerance_m=cfg.get("join_tolerance_m", JOIN_TOLERANCE_M))
     if cfg.get("reverse"):
         coords.reverse()
     total = line_length_m(coords)
@@ -295,12 +297,15 @@ def cmd_build(args):
         raise SystemExit(f"エラー：segments は {len(bounds) - 1} 件必要です（splits の数 + 1）")
 
     features = []
+    seg_admins = []  # 区間ごとの管理者（県境をまたぐ道は区間で管理者が変わる）
     for i, seg in enumerate(seg_cfgs):
         part = coords[bounds[i]:bounds[i + 1] + 1]
+        seg_admin = seg.get("administrator", admin)
+        seg_admins.append(seg_admin)
         features.append({
             "type": "Feature",
             "properties": {
-                "road": road, "administrator": admin["name"], "note": seg["note"],
+                "road": road, "administrator": seg_admin["name"], "note": seg["note"],
                 "surface": seg.get("surface"), "general_access": seg.get("general_access", "不明"),
                 "difficulty": seg.get("difficulty"),
                 "length_km": round(line_length_m(part) / 1000, 2),
@@ -328,8 +333,13 @@ def cmd_build(args):
         lines.append(f"-- 出典：{src}")
     lines += [
         "", "set search_path = public, extensions;", "",
-        f"insert into administrators (name, kind) values ({sql_text(admin['name'])}, {sql_text(admin['kind'])})",
-        "on conflict (name) do nothing;",
+    ]
+    for a in {a["name"]: a for a in [admin] + seg_admins}.values():
+        lines += [
+            f"insert into administrators (name, kind) values ({sql_text(a['name'])}, {sql_text(a['kind'])})",
+            "on conflict (name) do nothing;",
+        ]
+    lines += [
         f"insert into roads (name, kind) values ({sql_text(road)}, {sql_text(cfg.get('kind', '林道'))})",
         "on conflict (name) do nothing;", "",
         f"delete from segments where road_id = (select id from roads where name = {sql_text(road)});", "",
@@ -344,7 +354,7 @@ def cmd_build(args):
             f"{sql_text(p['general_access'])}, {sql_text(p['note'])},",
             f"  ST_SetSRID(ST_GeomFromGeoJSON('{geojson}'), 4326)",
             "from roads r, administrators a",
-            f"where r.name = {sql_text(road)} and a.name = {sql_text(admin['name'])};", "",
+            f"where r.name = {sql_text(road)} and a.name = {sql_text(p['administrator'])};", "",
         ]
     for r in restrictions:
         note = features[r["segment"]]["properties"]["note"]

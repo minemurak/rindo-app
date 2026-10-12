@@ -1,0 +1,26 @@
+{
+  "slug": "yakyuzawa",
+  "road": "矢弓沢線",
+  "kind": "林道",
+  "administrator": {
+    "name": "上野村",
+    "kind": "市町村"
+  },
+  "osm_file": "data/osm/gunma-seimo.geojson",
+  "osm_name": "林道矢弓沢線",
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [],
+  "segments": [
+    {
+      "note": "全線",
+      "surface": null,
+      "general_access": "可"
+    }
+  ],
+  "restrictions": [],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）",
+    "通行可否と規制：上野村「通行止めのお知らせ（令和8年9月2日現在）」。林道の問い合わせ先は上野村役場 振興課（通行止めなし）"
+  ]
+}

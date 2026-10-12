@@ -1,0 +1,59 @@
+{
+  "slug": "ueno-otaki",
+  "road": "上野大滝線",
+  "kind": "林道",
+  "administrator": {
+    "name": "上野村",
+    "kind": "市町村"
+  },
+  "osm_file": "data/osm/gunma-seimo.geojson",
+  "osm_name": "林道上野大滝線",
+  "join_tolerance_m": 150,
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [
+    {
+      "name": "天丸トンネル（県境）",
+      "lon": 138.7844143,
+      "lat": 36.0351847,
+      "source": "OSMの線の途切れ（トンネル部分）の北側。県境はトンネル内"
+    }
+  ],
+  "segments": [
+    {
+      "note": "群馬県側（上野村）〜天丸トンネル",
+      "surface": null,
+      "general_access": "可"
+    },
+    {
+      "note": "天丸トンネル〜埼玉県側（大滝・中津川方面）",
+      "surface": null,
+      "general_access": "不明",
+      "administrator": {
+        "name": "秩父農林振興センター",
+        "kind": "県"
+      }
+    }
+  ],
+  "restrictions": [
+    {
+      "segment": 0,
+      "kind": "全面通行止め",
+      "reason": "林道災害復旧工事",
+      "source_url": "https://www.uenomura.jp/admin/life/seikatsu/road/tsukoudome.html",
+      "fetched_at": "2026-10-12 11:00+09"
+    },
+    {
+      "segment": 1,
+      "kind": "全面通行止め",
+      "reason": "路肩決壊・落石が多いため当分の間。天丸トンネル先の埼玉県側でゲート閉鎖",
+      "source_url": "https://www.uenomura.jp/admin/life/seikatsu/road/tsukoudome.html",
+      "fetched_at": "2026-10-12 11:00+09"
+    }
+  ],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）",
+    "線のうち埼玉県側：OSMの管理者タグ 埼玉県(秩父農林振興センター)",
+    "通行可否と規制：上野村「通行止めのお知らせ（令和8年9月2日現在）」。林道の問い合わせ先は上野村役場 振興課（埼玉県側の状況も同ページに記載）"
+  ]
+}
