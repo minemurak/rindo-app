@@ -1,1 +1,26 @@
-{}
+{
+ "saitama-chichibu": {
+  "count": 1,
+  "error": "UnicodeEncodeError: 'latin-1' codec can't encode characters in position 47-58: ordinal not in range(256)"
+ },
+ "saitama-kawagoe": {
+  "count": 1,
+  "error": "UnicodeEncodeError: 'latin-1' codec can't encode characters in position 47-58: ordinal not in range(256)"
+ },
+ "tokyo-forestry": {
+  "count": 1,
+  "error": "UnicodeEncodeError: 'latin-1' codec can't encode characters in position 47-58: ordinal not in range(256)"
+ },
+ "gunma-uenomura": {
+  "count": 1,
+  "error": "UnicodeEncodeError: 'latin-1' codec can't encode characters in position 47-58: ordinal not in range(256)"
+ },
+ "gunma-kanna-winter": {
+  "count": 1,
+  "error": "UnicodeEncodeError: 'latin-1' codec can't encode characters in position 47-58: ordinal not in range(256)"
+ },
+ "gunma-fujioka-mikabo": {
+  "count": 1,
+  "error": "UnicodeEncodeError: 'latin-1' codec can't encode characters in position 47-58: ordinal not in range(256)"
+ }
+}
