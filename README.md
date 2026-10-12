@@ -90,3 +90,13 @@ Base64 は Windows の PowerShell で作れる。
 5. `python3 tools/road.py bundle` で全林道を `supabase/all-roads.sql` にまとめ、Supabase の SQL Editor で実行する（何度実行しても同じ状態になる）
 
 同じ名前の線に枝道や離れた部分があれば、いちばん長くつながった本線だけを使い、除いた長さを表示する。境目の点が線から100m以上離れているときも警告する。
+
+## 通行止め情報の更新確認（毎日自動）
+
+GitHub Actions の「Watch closures」が毎朝 5:47（日本時間）に、`data/watch/sources.json` に並べた自治体のページ（PDF を含む）を確認する。
+
+- 前回から本文が変わっていたら、差分を書いた Issue「通行止め情報の更新 YYYY-MM-DD」を立てる。Issue の通知メールで気づける
+- 3日続けてページを取得できなかったときも Issue を立てる（ページの場所が変わった可能性）
+- Issue を見て、必要なら `data/roads/` の設定を直し、`python3 tools/road.py build`・`bundle` を実行し、Supabase で `supabase/all-roads.sql` を実行する。終わったら Issue を閉じる
+- 見に行くページを増やすときは `sources.json` に足す。`start`・`end`（正規表現）で本文の範囲を決めると、メニューなどの変化で知らせなくなる
+- リポジトリに60日間更新がないと、GitHub が毎日の実行を止める。止まったら Actions タブで「Enable workflow」を押す
