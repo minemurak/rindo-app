@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: PDF を文字にする道具を入れる
-        run: sudo apt-get install -y -qq poppler-utils >/dev/null
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils >/dev/null
 
       - name: ページを確認
         run: python3 tools/watch.py | tee -a "$GITHUB_STEP_SUMMARY"
