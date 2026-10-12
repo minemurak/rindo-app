@@ -37,7 +37,7 @@ struct ContentView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                Text("地図：国土地理院　線：© OpenStreetMap contributors")
+                Text("地図・一部の線：国土地理院　線：© OpenStreetMap contributors")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

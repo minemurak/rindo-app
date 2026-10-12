@@ -6,7 +6,7 @@
     "name": "御荷鉾スーパー林道 沿線市町村",
     "kind": "市町村"
   },
-  "osm_file": "data/osm/gunma-seimo.geojson",
+  "osm_file": "data/osm/mikabo-all.geojson",
   "osm_name": "御荷鉾スーパー林道",
   "join_tolerance_m": 70,
   "osm_exclude": [],
@@ -14,7 +14,7 @@
   "splits": [],
   "segments": [
     {
-      "note": "西端（南牧村側）〜神流町付近。OSMの線が途切れている東側（藤岡市側）約16kmは未収録",
+      "note": "全線（西端 南牧村側〜東端 藤岡市側）",
       "surface": null,
       "general_access": "可"
     }
@@ -32,8 +32,35 @@
   ],
   "sources": [
     "線：© OpenStreetMap contributors（ODbL）",
+    "OSM で線のない2か所（約1.0km・約2.2km）：国土地理院 道路中心線（ベクトルタイル）",
     "通行可否：上野村「通行止めのお知らせ（令和8年9月2日現在）」で通行止めなし",
     "冬季閉鎖：神流町「冬季通行止め情報」（令和7年度の期間）、藤岡市「御荷鉾スーパー林道冬季閉鎖のお知らせ」（12月10日〜4月20日）",
     "管理者：複数の市町村にまたがるため、沿線市町村としてまとめて登録"
+  ],
+  "gap_fills": [
+    {
+      "note": "名無村線分岐付近（約0.6km）",
+      "file": "data/gsi/mikabo-gaps.geojson",
+      "from": [
+        138.8731156,
+        36.1460222
+      ],
+      "to": [
+        138.8784589,
+        36.1423129
+      ]
+    },
+    {
+      "note": "東御荷鉾線分岐付近（約1.5km）",
+      "file": "data/gsi/mikabo-gaps.geojson",
+      "from": [
+        138.9109581,
+        36.148541
+      ],
+      "to": [
+        138.9273728,
+        36.151039
+      ]
+    }
   ]
 }

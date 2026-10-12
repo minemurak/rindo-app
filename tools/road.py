@@ -292,6 +292,49 @@ def sql_text(value) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def gap_fill_path(fill: dict) -> list[list[float]]:
+    """OSM の線が途切れている2点の間を、国土地理院の道路中心線（徒歩道を除く）の最短経路でつなぐ"""
+    import heapq
+    feats = json.loads((ROOT / fill["file"]).read_text(encoding="utf-8"))["features"]
+    key = lambda q: (round(q[0], 7), round(q[1], 7))
+    graph: dict = {}
+    for f in feats:
+        if f.get("properties", {}).get("type") == "徒歩道":
+            continue
+        pts = [key(q) for q in f["geometry"]["coordinates"]]
+        for u, v in zip(pts, pts[1:]):
+            d = dist_m(u, v)
+            graph.setdefault(u, {})[v] = d
+            graph.setdefault(v, {})[u] = d
+    a, b = tuple(fill["from"]), tuple(fill["to"])
+    s = min(graph, key=lambda n: dist_m(n, a))
+    t = min(graph, key=lambda n: dist_m(n, b))
+    for name, pt, node in (("from", a, s), ("to", b, t)):
+        if dist_m(pt, node) > JOIN_TOLERANCE_M:
+            raise SystemExit(f"エラー：gap_fills の {name} {list(pt)} の近く（{JOIN_TOLERANCE_M:.0f}m 以内）に国土地理院の線がありません")
+    dist, prev = {s: 0.0}, {s: None}
+    heap = [(0.0, s)]
+    while heap:
+        d, u = heapq.heappop(heap)
+        if u == t:
+            break
+        if d > dist[u]:
+            continue
+        for v, w in graph[u].items():
+            if d + w < dist.get(v, float("inf")):
+                dist[v], prev[v] = d + w, u
+                heapq.heappush(heap, (d + w, v))
+    if t not in prev:
+        raise SystemExit(f"エラー：gap_fills {list(a)} → {list(b)} を国土地理院の車道でつなげません")
+    path, node = [], t
+    while node is not None:
+        path.append(list(node))
+        node = prev[node]
+    path.reverse()
+    # 途切れの両端（OSM 側の点）を含めて、確実につながるようにする
+    return [list(a)] + path + [list(b)]
+
+
 def cmd_build(args):
     cfg_path = Path(args.config)
     cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
@@ -317,6 +360,10 @@ def cmd_build(args):
     ways = [f["geometry"]["coordinates"] for f in picked
             if f.get("properties", {}).get("@id") not in exclude]
     print(f"OSM から{label}の線を {len(ways)} 本読み込み")
+    for fill in cfg.get("gap_fills", []):
+        path = gap_fill_path(fill)
+        ways.append(path)
+        print(f"途切れを補う：{fill.get('note', '')} 国土地理院の道路中心線 {line_length_m(path) / 1000:.2f} km")
 
     # 県境やOSMの描き方で線が少し離れている道は、config の join_tolerance_m で許す距離を広げる
     coords = join_ways(ways, report=True, tolerance_m=cfg.get("join_tolerance_m", JOIN_TOLERANCE_M))
