@@ -62,10 +62,28 @@ private struct SegmentCard: View {
     let onRemove: () -> Void
     let onClose: () -> Void
 
+    /// 検索する言葉：名前に「林道」が入っていなければ付ける（例：上武秩父線 → 林道 上武秩父線）
+    private var searchURL: URL? {
+        let query = info.road.contains("林道") ? info.road : "林道 \(info.road)"
+        var components = URLComponents(string: "https://www.google.com/search")
+        components?.queryItems = [URLQueryItem(name: "q", value: query)]
+        return components?.url
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(info.road).font(.headline)
+                // 林道名をタップすると、ブラウザで林道名を検索する（通行止め情報や走行記録を探す用）
+                if let url = searchURL {
+                    Link(destination: url) {
+                        Label(info.road, systemImage: "magnifyingglass")
+                            .labelStyle(.titleAndIcon)
+                            .font(.headline)
+                    }
+                    .accessibilityHint("ブラウザで林道名を検索します")
+                } else {
+                    Text(info.road).font(.headline)
+                }
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
