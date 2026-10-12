@@ -1,0 +1,28 @@
+{
+  "slug": "tokyo-hikage",
+  "road": "日影線",
+  "kind": "林道",
+  "administrator": {
+    "name": "東京都森林事務所 浅川林務出張所",
+    "kind": "都"
+  },
+  "osm_file": "data/osm/tokyo-west.geojson",
+  "osm_name": [
+    "林道日影線"
+  ],
+  "osm_exclude": [],
+  "reverse": false,
+  "splits": [],
+  "segments": [
+    {
+      "note": "八王子市：特になし",
+      "surface": null,
+      "general_access": "可"
+    }
+  ],
+  "restrictions": [],
+  "sources": [
+    "線：© OpenStreetMap contributors（ODbL）",
+    "通行可否と規制：東京都森林事務所「森林事務所管理林道の通行規制について」通行状況一覧（令和8年10月2日現在）。「通行規制」は林業関係者以外の車両の乗り入れを規制。data/sources/tokyo-forestry-2026-10-02.tsv"
+  ]
+}
