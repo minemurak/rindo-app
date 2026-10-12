@@ -23,17 +23,10 @@ final class SegmentStore: ObservableObject {
     }()
 
     func load() async {
-        // 貼り付け時に混じりやすい空白・末尾の「/」・「/rest/v1」を取り除く
-        var urlText = Secrets.supabaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        for suffix in ["/", "/rest/v1", "/rest/v1/"] where urlText.hasSuffix(suffix) {
-            urlText.removeLast(suffix.count)
-        }
-        let key = Secrets.supabaseAnonKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: urlText), url.host != nil, !key.isEmpty else {
-            useCache(reason: "接続情報が未設定または不正（URL：\(urlText.prefix(40))）")
+        guard let client = Backend.client else {
+            useCache(reason: "接続情報が未設定または不正（URL：\(Secrets.supabaseURL.prefix(40))）")
             return
         }
-        let client = SupabaseClient(supabaseURL: url, supabaseKey: key)
         let started = Date()
         do {
             let raw = try await client.rpc("segments_in_bbox", params: Self.bbox).execute().data
@@ -53,7 +46,7 @@ final class SegmentStore: ObservableObject {
             print("[RindoApp] fetch failed: \(error)")
             // 原因の切り分け用に、失敗理由を画面に出す
             let detail = String(String(describing: error).prefix(160))
-            useCache(reason: "取得失敗（\(url.host ?? "")）\n\(detail)")
+            useCache(reason: "取得失敗（\(Backend.host)）\n\(detail)")
         }
     }
 

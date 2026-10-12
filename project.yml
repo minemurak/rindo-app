@@ -21,6 +21,10 @@ targets:
     dependencies:
       - package: MapLibre
       - package: Supabase
+    entitlements:
+      path: Sources/RindoApp.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]   # Apple でサインイン（口コミの投稿用）
     info:
       path: Sources/Info.plist
       properties:

@@ -7,6 +7,8 @@ struct ContentView: View {
     @StateObject private var store = SegmentStore()
     @StateObject private var offline = OfflineMapStore()
     @StateObject private var weather = WeatherStore()
+    @StateObject private var reviews = ReviewStore()
+    @State private var reviewRoad: String?
     @State private var selected: MapView.SegmentInfo?
     @State private var location = LocationPermission()
 
@@ -23,6 +25,7 @@ struct ContentView: View {
                 if let s = selected {
                     SegmentCard(info: s, offline: offline.state(of: s.road),
                                 weather: weather.state(of: s.road),
+                                onReviews: { reviewRoad = s.road },
                                 onSave: { offline.download(road: s.road) },
                                 onRemove: { offline.remove(road: s.road) },
                                 onClose: { selected = nil })
@@ -54,6 +57,9 @@ struct ContentView: View {
         .onChange(of: store.geojson) { _, newValue in
             offline.sync(segments: newValue)
         }
+        .sheet(item: Binding(get: { reviewRoad.map(RoadID.init) }, set: { reviewRoad = $0?.id })) { item in
+            ReviewsView(road: item.id, store: reviews)
+        }
         .task(id: selected?.road) {
             // 林道を選んだら、両端の中間地点の天気予報を取る
             guard let s = selected, !s.ends.isEmpty else { return }
@@ -68,6 +74,7 @@ private struct SegmentCard: View {
     let info: MapView.SegmentInfo
     let offline: OfflineMapStore.RoadState
     let weather: WeatherStore.State?
+    let onReviews: () -> Void
     let onSave: () -> Void
     let onRemove: () -> Void
     let onClose: () -> Void
@@ -110,6 +117,9 @@ private struct SegmentCard: View {
             if let weather { WeatherRow(state: weather).padding(.top, 2) }
             HStack(spacing: 8) {
                 if !info.ends.isEmpty { NaviMenu(info: info) }
+                Button(action: onReviews) { Label("口コミ", systemImage: "text.bubble") }
+                    .buttonStyle(.bordered)
+                    .font(.subheadline)
             }
             .padding(.top, 4)
             offlineRow
@@ -266,6 +276,9 @@ private struct Legend: View {
         }
     }
 }
+
+/// シートに渡す林道名
+private struct RoadID: Identifiable { let id: String }
 
 /// 現在地を地図に出すための許可を求める
 final class LocationPermission {

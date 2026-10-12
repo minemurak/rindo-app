@@ -1,6 +1,7 @@
 # XcodeGenで生成するもの（リポジトリに入れない）
 RindoApp.xcodeproj/
 Sources/Info.plist
+Sources/RindoApp.entitlements
 
 # ビルド時にSecretsから書き出す接続情報
 Sources/Secrets.swift
