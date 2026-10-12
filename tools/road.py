@@ -236,6 +236,50 @@ def cmd_fetch(args):
     raise SystemExit(f"エラー：すべてのサーバーで取得できませんでした（最後のエラー：{last_error}）")
 
 
+GSI_RDCL_URL = "https://cyberjapandata.gsi.go.jp/xyz/experimental_rdcl/{z}/{x}/{y}.geojson"
+
+
+def cmd_gsi(args):
+    """国土地理院の道路中心線（ベクトルタイル z16）を範囲で取り、data/gsi/<slug>.geojson に保存する。
+    OSM で線が描かれていない部分を補うために使う。出典「国土地理院」の表示が必要。"""
+    import urllib.request
+    s, w, n, e = parse_bbox(args.bbox)
+    z = 16
+
+    def tile(lon, lat):
+        x = int((lon + 180) / 360 * 2 ** z)
+        y = int((1 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2 * 2 ** z)
+        return x, y
+
+    x0, y0 = tile(w, n)
+    x1, y1 = tile(e, s)
+    if (x1 - x0 + 1) * (y1 - y0 + 1) > 400:
+        raise SystemExit("エラー：範囲が広すぎます（タイル400枚まで）")
+    features = []
+    for x in range(x0, x1 + 1):
+        for y in range(y0, y1 + 1):
+            url = GSI_RDCL_URL.format(z=z, x=x, y=y)
+            req = urllib.request.Request(url, headers={"User-Agent": "rindo-app/0.1 (github.com/minemurak/rindo-app)"})
+            try:
+                with urllib.request.urlopen(req, timeout=60) as res:
+                    tile_geo = json.loads(res.read().decode("utf-8"))
+            except urllib.error.HTTPError as err:
+                if err.code == 404:  # 道のないタイル
+                    continue
+                raise
+            for f in tile_geo.get("features", []):
+                if f.get("geometry", {}).get("type") != "LineString":
+                    continue
+                props = f.get("properties", {})
+                props["@id"] = f"gsi/{props.get('rID', '')}/{x}/{y}/{len(features)}"
+                features.append({"type": "Feature", "properties": props, "geometry": f["geometry"]})
+    out = ROOT / "data" / "gsi" / f"{args.slug}.geojson"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"type": "FeatureCollection", "attribution": "国土地理院（道路中心線）",
+                               "features": features}, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"{(x1 - x0 + 1) * (y1 - y0 + 1)} 枚のタイルから {len(features)} 本の線を取得 → {out.relative_to(ROOT)}")
+
+
 def cmd_place(args):
     url = "https://msearch.gsi.go.jp/address-search/AddressSearch?q=" + urllib.parse.quote(args.name)
     print(url)
@@ -420,6 +464,10 @@ def main(argv=None):
     p.add_argument("name", nargs="?", help="林道名の一部。正規表現も可。省略すると範囲内の道をすべて取る")
     p.add_argument("--bbox", help="範囲 南,西,北,東。省略時は3都県全体")
     p.set_defaults(func=cmd_fetch)
+    p = sub.add_parser("gsi", help="国土地理院の道路中心線を範囲で取得して data/gsi/<slug>.geojson に保存する")
+    p.add_argument("slug")
+    p.add_argument("--bbox", required=True, help="南,西,北,東")
+    p.set_defaults(func=cmd_gsi)
     p = sub.add_parser("place", help="国土地理院の地名検索のリンクを出す")
     p.add_argument("name", help="地名（例：風早峠）")
     p.set_defaults(func=cmd_place)

@@ -1,0 +1,43 @@
+# 国土地理院の道路中心線を範囲で取得し、data/gsi/<slug>.geojson としてコミットする。
+# OSM で線が描かれていない部分を補うときに使う。
+# Actions タブ →「Fetch GSI roads」→「Run workflow」で、保存名と範囲を入れて実行する。
+name: Fetch GSI roads
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "保存名（英数字とハイフン。例：mikabo-gaps）"
+        required: true
+      bbox:
+        description: "範囲 南,西,北,東（例：36.13,138.86,36.16,138.93）。タイル400枚まで"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 国土地理院の道路中心線を取得
+        env:
+          SLUG: ${{ inputs.slug }}
+          BBOX: ${{ inputs.bbox }}
+        run: |
+          case "$SLUG" in (*[!a-z0-9-]*|"") echo "保存名は英小文字・数字・ハイフンのみ"; exit 1;; esac
+          python3 tools/road.py gsi "$SLUG" --bbox "$BBOX" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: 取得したファイルをコミット
+        env:
+          SLUG: ${{ inputs.slug }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "data/gsi/$SLUG.geojson"
+          if git diff --cached --quiet; then echo "変更なし"; exit 0; fi
+          git commit -m "国土地理院の道路中心線を取得：$SLUG [skip ci]"
+          git pull --rebase
+          git push
