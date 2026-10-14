@@ -145,6 +145,39 @@ def join_ways(ways: list[list[list[float]]], report: bool = False,
     return [list(p) for p in path]
 
 
+def split_parts(ways, tolerance_m: float, min_len_m: float = 500.0) -> list[list[list[float]]]:
+    """つながっている線のまとまりごとに分け、それぞれの本線（join_ways）を西から順に返す。
+    OSM の線が途中で途切れている道を、途切れたまま区間に分けて載せるときに使う。短すぎるまとまりは除く。"""
+    parent = list(range(len(ways)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    ends = [(w[0], w[-1]) for w in ways]
+    for i in range(len(ways)):
+        for j in range(i + 1, len(ways)):
+            # 端点どうし、または端点と相手の途中の点が近ければ同じまとまり
+            if any(dist_m(a, b) <= tolerance_m for a in ends[i] for b in ways[j]) or \
+               any(dist_m(a, b) <= tolerance_m for a in ends[j] for b in ways[i]):
+                parent[find(i)] = find(j)
+    groups: dict = {}
+    for i, w in enumerate(ways):
+        groups.setdefault(find(i), []).append(w)
+    parts = []
+    for g in groups.values():
+        line = join_ways(g, tolerance_m=tolerance_m)
+        length = line_length_m(line)
+        if length >= min_len_m:
+            parts.append(line)
+        else:
+            print(f"  注意：短いまとまり {length:.0f} m を除きました")
+    parts.sort(key=lambda c: min(c[0][0], c[-1][0]))
+    return parts
+
+
 def nearest_index(coords, point) -> tuple[int, float]:
     best = min(range(len(coords)), key=lambda k: dist_m(coords[k], point))
     return best, dist_m(coords[best], point)
@@ -366,7 +399,16 @@ def cmd_build(args):
         print(f"途切れを補う：{fill.get('note', '')} 国土地理院の道路中心線 {line_length_m(path) / 1000:.2f} km")
 
     # 県境やOSMの描き方で線が少し離れている道は、config の join_tolerance_m で許す距離を広げる
-    coords = join_ways(ways, report=True, tolerance_m=cfg.get("join_tolerance_m", JOIN_TOLERANCE_M))
+    tolerance = cfg.get("join_tolerance_m", JOIN_TOLERANCE_M)
+    if cfg.get("parts"):
+        # 途切れたまま、つながっている部分ごとに区間にする（splits は使わない）
+        part_lines = split_parts(ways, tolerance)
+        if len(part_lines) != len(cfg["segments"]):
+            for k, c in enumerate(part_lines):
+                print(f"  まとまり {k}：{line_length_m(c) / 1000:.2f} km {c[0]} → {c[-1]}")
+            raise SystemExit(f"エラー：parts のとき segments は {len(part_lines)} 件必要です")
+        return build_output(cfg, cfg_path, part_lines)
+    coords = join_ways(ways, report=True, tolerance_m=tolerance)
     if cfg.get("reverse"):
         coords.reverse()
     total = line_length_m(coords)
@@ -383,14 +425,19 @@ def cmd_build(args):
         raise SystemExit("エラー：splits は始点に近い順に並べてください（または reverse を切り替える）")
 
     bounds = [0] + cut_points + [len(coords) - 1]
-    seg_cfgs = cfg["segments"]
-    if len(seg_cfgs) != len(bounds) - 1:
+    if len(cfg["segments"]) != len(bounds) - 1:
         raise SystemExit(f"エラー：segments は {len(bounds) - 1} 件必要です（splits の数 + 1）")
+    build_output(cfg, cfg_path, [coords[bounds[i]:bounds[i + 1] + 1] for i in range(len(bounds) - 1)])
 
+
+def build_output(cfg, cfg_path, parts):
+    """区間の線（parts）から GeoJSON と SQL を書き出す"""
+    slug, road, admin = cfg["slug"], cfg["road"], cfg["administrator"]
+    seg_cfgs = cfg["segments"]
     features = []
     seg_admins = []  # 区間ごとの管理者（県境をまたぐ道は区間で管理者が変わる）
     for i, seg in enumerate(seg_cfgs):
-        part = coords[bounds[i]:bounds[i + 1] + 1]
+        part = parts[i]
         seg_admin = seg.get("administrator", admin)
         seg_admins.append(seg_admin)
         features.append({
