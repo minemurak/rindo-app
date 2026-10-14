@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var reviewRoad: String?
     @State private var selected: MapView.SegmentInfo?
     @State private var location = LocationPermission()
+    @State private var showCredits = false
 
     private var buildNumber: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
@@ -42,9 +43,16 @@ struct ContentView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                Text("地図・一部の線：国土地理院　線：© OpenStreetMap contributors")
+                // 出典は画面に常に表示する（国土地理院の決まり）。タップで詳しい出典と注意
+                Button { showCredits = true } label: {
+                    HStack(spacing: 4) {
+                        Text("出典：地理院タイル（国土地理院）、© OpenStreetMap contributors ほか")
+                        Image(systemName: "info.circle")
+                    }
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
             .padding(12)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
@@ -60,6 +68,7 @@ struct ContentView: View {
         .sheet(item: Binding(get: { reviewRoad.map(RoadID.init) }, set: { reviewRoad = $0?.id })) { item in
             ReviewsView(road: item.id, store: reviews)
         }
+        .sheet(isPresented: $showCredits) { CreditsView() }
         .task(id: selected?.road) {
             // 林道を選んだら、両端の中間地点の天気予報を取る
             guard let s = selected, !s.ends.isEmpty else { return }
@@ -138,6 +147,8 @@ private struct SegmentCard: View {
             case .none:
                 Button(action: onSave) { Label("この林道の地図を保存", systemImage: "arrow.down.circle") }
                     .buttonStyle(.borderedProminent)
+                Text("ご自身の利用の範囲で")
+                    .font(.caption2).foregroundStyle(.secondary)
             case .downloading:
                 ProgressView(value: Double(offline.percent), total: 100)
                     .frame(maxWidth: 140)
