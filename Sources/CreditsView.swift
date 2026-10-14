@@ -14,8 +14,6 @@ struct CreditsView: View {
                 }
                 Section("林道の線") {
                     Link("© OpenStreetMap contributors（ODbL）", destination: URL(string: "https://www.openstreetmap.org/copyright")!)
-                    Text("一部の区間（御荷鉾スーパー林道の約3km）は、道路中心線（国土地理院）を加工して作成")
-                        .font(.footnote)
                 }
                 Section("通行可否・規制") {
                     Text("各林道の管理者（埼玉県・東京都森林事務所・上野村ほか）の公開情報をもとに作成。最新の状況は必ず管理者の情報と現地の標識で確認してください。")
