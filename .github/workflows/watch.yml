@@ -1,4 +1,5 @@
 # 通行止め情報のページを毎朝確認し、変わっていたら Issue を立てる（Issue の通知メールで気づける）。
+# あわせて Supabase に1回問い合わせる（無料プランは7日間アクセスがないと一時停止されるため）。
 # 手動で動かすときは Actions タブ →「Watch closures」→「Run workflow」。
 name: Watch closures
 
@@ -42,3 +43,23 @@ jobs:
           git commit -m "通行止め情報のページを確認 $(TZ=Asia/Tokyo date +%Y-%m-%d) [skip ci]"
           git pull --rebase
           git push
+
+  keep-supabase-awake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supabase に問い合わせる（一時停止を防ぐ）
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          url="$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]' | sed -e 's#/rest/v1/*$##' -e 's#/*$##')"
+          key="$(printf '%s' "$SUPABASE_ANON_KEY" | tr -d '[:space:]')"
+          # 小さい範囲の林道を1回取るだけ（データは変えない）
+          code=$(curl -sS -o /tmp/res.json -w '%{http_code}' -X POST "$url/rest/v1/rpc/segments_in_bbox" \
+            -H "apikey: $key" -H "Content-Type: application/json" \
+            -d '{"min_lon":139.0,"min_lat":36.1,"max_lon":139.01,"max_lat":36.11}')
+          echo "応答 $code（$(wc -c < /tmp/res.json) バイト）" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != "200" ]; then
+            echo "Supabase から正常な応答がありません。一時停止されていないか、ダッシュボードを確認してください" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
