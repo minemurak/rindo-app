@@ -1,0 +1,56 @@
+# Supabase の無料プランは、利用が少ない状態が7日続くと一時停止される（目安は「1日に数回のデータベースへの問い合わせ」）。
+# 6時間ごとに、アプリと同じ読み取りの問い合わせを数回行って、一時停止を防ぐ。データは変えない。
+# 応答がなければ実行が失敗し、GitHub から通知メールが届く。そのときは Supabase のダッシュボードで「Resume project」を押す。
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "13 */6 * * *"   # 6時間ごと
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supabase に問い合わせる
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          url="$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]' | sed -e 's#/rest/v1/*$##' -e 's#/*$##')"
+          key="$(printf '%s' "$SUPABASE_ANON_KEY" | tr -d '[:space:]')"
+          ok=0
+          call() {  # $1：説明、$2 以降：curl の引数
+            name="$1"; shift
+            code=$(curl -sS --retry 3 --retry-delay 20 -o /tmp/res.json -w '%{http_code}' "$@" \
+                   -H "apikey: $key" -H "Content-Type: application/json" 2>/tmp/err.txt) || code="接続できない（$(head -c 120 /tmp/err.txt)）"
+            echo "$name：$code" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "::notice title=$name::$code"
+            [ "$code" = "200" ] && ok=$((ok + 1))
+            return 0
+          }
+          call "林道の区間"   -X POST "$url/rest/v1/rpc/segments_in_bbox" -d '{"min_lon":139.0,"min_lat":36.1,"max_lon":139.05,"max_lat":36.15}'
+          call "林道の一覧"   "$url/rest/v1/roads?select=id,name&limit=5"
+          call "管理者の一覧" "$url/rest/v1/administrators?select=id,name&limit=5"
+          call "規制の一覧"   "$url/rest/v1/restrictions?select=id,kind&limit=5"
+          if [ "$ok" -eq 0 ]; then
+            echo "::error title=Supabase::応答がありません。一時停止されていないか、ダッシュボードで確認し「Resume project」を押してください"
+            exit 1
+          fi
+
+      # GitHub は60日間リポジトリに更新がないと定期実行を止めるので、月に1回だけ記録を残す
+      - uses: actions/checkout@v4
+        if: github.event_name == 'schedule'
+      - name: 月に1回、動作記録をコミット
+        if: github.event_name == 'schedule'
+        run: |
+          [ "$(TZ=Asia/Tokyo date +%d)" = "01" ] && [ "$(TZ=Asia/Tokyo date +%H)" -lt 6 ] || exit 0
+          mkdir -p data/watch
+          TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M' > data/watch/keepalive.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/watch/keepalive.txt
+          git commit -m "定期実行の動作記録 [skip ci]" && git pull --rebase && git push
