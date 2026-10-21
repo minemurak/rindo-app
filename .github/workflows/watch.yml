@@ -59,6 +59,7 @@ jobs:
             -H "apikey: $key" -H "Content-Type: application/json" \
             -d '{"min_lon":139.0,"min_lat":36.1,"max_lon":139.01,"max_lat":36.11}')
           echo "応答 $code（$(wc -c < /tmp/res.json) バイト）" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Supabase::応答 $code $(head -c 200 /tmp/res.json | tr -d '\n')"
           if [ "$code" != "200" ]; then
             echo "Supabase から正常な応答がありません。一時停止されていないか、ダッシュボードを確認してください" | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1
